@@ -1,0 +1,77 @@
+
+\label{chap:Litterature}
+% ===== Table + References (paste in your document body) =====
+
+\begin{tabularx}{\textwidth}{|p{3.9cm}|p{0.6cm}|p{3cm}|p{3.5cm}|X|p{0.5cm}|}
+\hline
+\textbf{Article} & \textbf{Year} & \textbf{Path planning method} & \textbf{Guidance / navigation} & \textbf{Main objective} & \textbf{Ref.} \\
+\hline
+Planning for Fish Net Inspection with an Autonomous OSV & n/a & Hierarchical Task Network (HTN): switch between close vs. far inspection behaviors & Surface OSV with waypoint/pose tracking; vision-based hole detection & Efficient large-net inspection by balancing coverage vs. accuracy using AI mission planning & [1] \\
+\hline
+Research Advances in Marine Aquaculture Net-Cleaning Robots (Sensors) & 2024 & Survey of A*/APF/RRT, meta-heuristics, RL/DRL for cleaning robots & Discusses localization/SLAM and navigation strategies & Review of state-of-the-art net-cleaning robots and trends & [2] \\
+\hline
+Research on AUV Path Optimization Using a Field Theory-Guided A* (JMSE) & 2024 & Field-Theory-Guided A* (FT-A*); post-optimized with Dubins curves & Planner outputs waypoints; standard AUV tracking assumed & Robust 3D collision-free path planning for AUVs & [3] \\
+\hline
+Kalypso: an inspection AUV for aquaculture (Probe – Fishery Science \& Aquaculture) & 2024 & Simple waypoint/coverage inside cage & Vision-aided autonomous navigation; label/damage detection & Build and field-test an AUV for cage inspection & [4] \\
+\hline
+A systematic review on recent trends in path planning techniques for AUVs (IJIRA) & 2025 & Survey: RRT/RRT*, A*, GA/PSO, RL/DRL, hybrids & Discusses trajectory control, robustness under currents & Map recent AUV path-planning methods, challenges, gaps & [5] \\
+\hline
+An integrated ROV solution for underwater net-cage inspection (SN Applied Sciences) & 2020 & No explicit global planner; CV-driven inspection workflow & Operator/assisted guidance; vision-based cues & Integrate sensors and CV for net damage detection and inspection & [6] \\
+\hline
+Surrogate Modeling for ROV Trajectory Planning in Realistic Marine Currents (OCEANS) & 2025 & Data-assisted planning with U-Net surrogate for flow fields & Current-informed trajectory guidance (feedforward from predicted currents) & Near real-time path selection in complex currents via CFD+DL surrogate & [7] \\
+\hline
+Aquaculture Robotics: Adaptive Path Planning Through Real-Time Estimation of the Shape of Flexible Net Pens & 2025 & Net-pen estimator (physics-based with DVL constraints) + elastic-band path planning for net-relative waypoints & Forward-looking DVL “net-lock”; net-relative waypoint following in cylindrical coords; heading kept perpendicular to net (LOS in control stack) & Estimate full pen shape in real time and plan/follow safe, net-relative paths; validated in simulation and full-scale trials (≈0.5 m RMSE on pen shape; autonomous ROV navigation in farm) & [8] \\
+\hline
+Underwater ROV Software for Fish Cage Inspection (MIPRO) & 2021 & Vision-servoing-inspired following of lines/sections & ROS-based control sending depth/heading/velocity refs; visual centering & Software stack for periodic net inspection and fouling classification from video & [9] \\
+\hline
+A Digital Twin Infrastructure for NGC of ROV during Inspection (Robotics) & 2024 & Not a global planner; complete NGC stack within a digital twin & LOS guidance; USBL localization; PID control; co-simulation & Demonstrate full NGC + digital-twin pipeline for (semi)autonomous ROV inspection & [10] \\
+\hline
+Application of Maneuvering-Based Control for Autonomous Inspection of Aquaculture Net Pens (ACIRS) & 2023 & Maneuvering-based inspection trajectories (control-oriented) & Distance/heading regulation relative to cage (autonomous inspection control) & Enable autonomous net-pen inspection via maneuvering-based control & [11] \\
+\hline
+Automatic Visual Inspection of a Net for Fish Farms by Means of Robotic Intelligence (OCEANS) & 2023 & Trajectories controlling depth, yaw, and net distance & Vision-in-the-loop: CNN distance-to-net + feedback controller & Accurate net inspection without GPS; hole detection pipeline & [12] \\
+\hline
+Autonomous ROV Inspections of Aquaculture Net Pens Using DVL (preprint/manuscript) & n/a & Continuous path following along net & LOS-based nonlinear guidance using DVL-inferred local net geometry & Autonomous traverse of flexible, unknown net geometry; stability analysis & [13] \\
+\hline
+Complete Coverage AUVs Path Planning Based on Glasius Bio-Inspired Neural Network (GBNN) & 2019 & GBNN for single-/multi-AUV complete coverage (discrete/centralized) & Waypoint/trajectory tracking (standard AUV control) & Efficient full coverage with multi-AUV cooperation, low compute & [14] \\
+\hline
+Coverage Path Planning with Real-Time Replanning and Surface Reconstruction (JFR) & 2015 & Nominal path from 2.5D map + stochastic trajectory-optimization replanning & Range-based adaptation during mission & Robust 3D coverage of complex structures with onboard replanning & [15] \\
+\hline
+$\varepsilon^\star$: An Online Coverage Path Planning Algorithm & n/a & Online CPP via “exploratory Turing machine” + MAPS potentials & Sensor-based online navigation (unknown environments) & Guaranteed online coverage without local-extrema traps & [16] \\
+\hline
+Evaluating Deep Learning Assisted Automated Aquaculture Net Pens Inspection Using ROV (arXiv) & 2023 & DL-based defect detection/segmentation for inspection & On-ROV real-time detection aiding guidance & Real-time hole/debris detection in adverse conditions, embedded-ready & [17] \\
+\hline
+Forward-Looking Sonar Based Autonomous Aquaculture Inspection (OCEANS) & 2024 & Perimeter coverage around circular cage via circle regression & FLS-based net detection; velocity/heading refs to keep desired standoff & Circle the cage at fixed distance under low visibility & [18] \\
+\hline
+Inspection Operations and Hole Detection in Fish Net Cages via Hybrid Underwater Intervention System Using DL (JMSE) & 2024 & Inspection trajectories on BlueROV2 platform & CNN distance-to-net + object detection; trajectory control & End-to-end inspection/hole detection platform; tank validation & [19] \\
+\hline
+A Review of Path Following, Trajectory Tracking, and Formation Control for AUVs (Drones) & 2025 & Review of path following, trajectory tracking, formation control (SMC, MPC, RL, NN) & Guidance/control under uncertainty, disturbances, multi-AUV cooperation & Summarize and analyze state-of-the-art AUV guidance/control; outlook & [20] \\
+\hline
+An Adaptive Line-of-sight (ALOS) Guidance Law for Path Following of Aircraft and Marine Craft (TCST) & 2023 & Adaptive Line-of-Sight (ALOS) guidance; compared with ILOS and ELOS & Heading autopilot + LOS-based yaw control; disturbance compensation (drift, sideslip) & Develop and analyze ALOS for robust path following under wind/wave/current disturbances; validated on Remus 100 AUV case study & [21] \\
+\hline
+\end{tabularx}
+
+\bigskip
+\noindent\textbf{References}
+\begin{enumerate}
+  \item Lin, T.X.; Tao, Q.; Zhang, F. “Planning for Fish Net Inspection with an Autonomous OSV.” \textit{OCEANS Conference}, 2023.
+  \item Liu, H.; Jiang, C.; Chen, J.; Li, H.; Chen, Y. “Research Advances in Marine Aquaculture Net-Cleaning Robots.” \textit{Sensors}, 24:7555, 2024. \url{https://doi.org/10.3390/s24237555}
+  \item Xu, Z.; Shen, Y.; Xie, Z.; Liu, Y. “Research on AUV Path Optimization Using a Field Theory-Guided A* Algorithm.” \textit{JMSE}, 12:1815, 2024. \url{https://doi.org/10.3390/jmse12101815}
+  \item Manos, N.; Kavallieratou, E.; Vasilopoulos, N. “Kalypso: An inspection AUV for aquaculture.” \textit{Probe – Fishery Science \& Aquaculture}, 6(1):2239, 2024. \url{https://doi.org/10.18686/fsa2239}
+  \item Narayanan, V.L.; et al. “A systematic review on recent trends in path planning techniques for AUVs.” \textit{IJIRA}, 2025. \url{https://doi.org/10.1007/s41315-025-00469-9}
+  \item Betancourt, J.; Coral, W.; Colorado, J. “An integrated ROV solution for underwater net-cage inspection in fish farms using computer vision.” \textit{SN Applied Sciences}, 2:1946, 2020. \url{https://doi.org/10.1007/s42452-020-03623-z}
+  \item (OCEANS) “Surrogate Modeling for ROV Trajectory Planning in Realistic Marine Currents: A Methodology for Data-Assisted Underwater Navigation.” (Conference), 2025.
+  \item Amundsen, H. B.; Katsidoniotaki, E.; Føre, M.; Kelasidi, E. “Aquaculture Robotics: Adaptive Path Planning Through Real-Time Estimation of the Shape of Flexible Net Pens.” \textit{IEEE Transactions on Field Robotics}, 2, 2025. \url{https://doi.org/10.1109/TFR.2025.3560245}
+  \item Borković, G.; et al. “Underwater ROV Software for Fish Cage Inspection.” \textit{MIPRO}, 2021.
+  \item Scaradozzi, D.; et al. “A Digital Twin Infrastructure for NGC of ROV during Inspection.” \textit{Robotics}, 13(7):96, 2024. \url{https://doi.org/10.3390/robotics13070096}
+  \item Cardaillac, A.; Amundsen, H.B.; Kelasidi, E.; Ludvigsen, M. “Application of Maneuvering-Based Control for Autonomous Inspection of Aquaculture Net Pens.” \textit{ACIRS}, 2023. \url{https://doi.org/10.1109/ACIRS58671.2023.10239708}
+  \item López-Barajas, S.; et al. “Automatic Visual Inspection of a Net for Fish Farms by Means of Robotic Intelligence.” \textit{OCEANS 2023}, Limerick.
+  \item Amundsen, H.B.; Caharija, W.; Pettersen, K.Y. “Autonomous ROV Inspections of Aquaculture Net Pens Using DVL.” (preprint/manuscript).
+  \item Sun, B.; et al. “Complete Coverage AUVs Path Planning Based on Glasius Bio-Inspired Neural Network Algorithm for Discrete and Centralized Programming.” \textit{IEEE Transactions on Cognitive and Developmental Systems}, 11(1):73–82, 2019.
+  \item Galceran, E.; et al. “Coverage Path Planning with Real-Time Replanning and Surface Reconstruction for Inspection of 3D Underwater Structures.” \textit{Journal of Field Robotics}, 32(7):952–983, 2015.
+  \item Song, J.; Gupta, S. “$\varepsilon^\star$: An Online Coverage Path Planning Algorithm.” (conference paper).
+  \item Akram, W.; et al. “Evaluating Deep Learning Assisted Automated Aquaculture Net Pens Inspection Using ROV.” arXiv, 2023.
+  \item Rosa, D.; Cabecinhas, D.; Ferreira, F. “Forward-Looking Sonar Based Autonomous Aquaculture Inspection.” \textit{OCEANS 2024 – Singapore}.
+  \item López-Barajas, S.; et al. “Inspection Operations and Hole Detection in Fish Net Cages through a Hybrid Underwater Intervention System Using Deep Learning Techniques.” \textit{JMSE}, 12:80, 2024. \url{https://doi.org/10.3390/jmse12010080}
+  \item He, L.; Xie, M.; Zhang, Y. “A Review of Path Following, Trajectory Tracking, and Formation Control for Autonomous Underwater Vehicles.” \textit{Drones}, 9(4):286, 2025. \url{https://doi.org/10.3390/drones9040286}
+  \item Fossen, T.I. “An Adaptive Line-of-sight (ALOS) Guidance Law for Path Following of Aircraft and Marine Craft.” \textit{IEEE Transactions on Control Systems Technology}, 2023. \url{https://doi.org/10.1109/TCST.2023.3259819}
+\end{enumerate}

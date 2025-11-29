@@ -1,0 +1,179 @@
+\section{Guidance System}
+
+This chapter describes the implementation of the guidance system, which takes the predefined
+path generated in the path frame and rotates the waypoints into the local net plane before
+computing the desired velocity commands. The algorithm preserves the structure of the original
+Pure Pursuit method, but instead of navigating in the $yz$-plane of NED, it navigates in the 
+tangent plane of the net surface. The surge distance control regulating $x_d$ is unchanged.
+
+The vehicle is modeled as a point mass, justified by the fact that the vehicle has full 6DOF
+authority. The goal is to follow the rotated path smoothly while keeping the camera facing
+the net surface.
+
+\subsection{Coordinate Frame}
+
+We use the standard NED frame:
+
+\[
+x \text{ (North)}, \qquad y \text{ (East)}, \qquad z \text{ (Down)}.
+\]
+
+The planned inspection path is defined in a \emph{path frame} $\{P\}$, in which all waypoints
+$W_i^P$ are generated.
+
+At runtime, the perception system provides an estimate of the local net surface normal:
+
+\[
+n_f \in \mathbb{R}^3.
+\]
+
+From this, we construct the tangent plane of the net:
+
+\[
+t_f = \frac{n_f \times z_n}{\|n_f \times z_n\|}, \qquad 
+b_f = n_f \times t_f, \qquad 
+z_n = [0, 0, 1]^T.
+\]
+
+The pair $(t_f, b_f)$ spans the plane along the net surface.  
+The transformation from the path frame to the net plane is represented by
+
+\[
+R_{fP} = 
+\begin{bmatrix}
+t_f & b_f
+\end{bmatrix},
+\]
+
+which maps $(y_P, z_P)$ coordinates of the path frame into the tangent plane.
+
+\subsection{Algorithm Overview}
+
+Each control cycle of the \texttt{guidance\_node} executes the following steps, identical in 
+structure to the original implementation:
+
+\begin{enumerate}
+    \item Rotate the next $k$ waypoints from the path frame into the net plane.
+    \item Compute the distance from the current position to each rotated waypoint.
+    \item Select the closest waypoint and choose a point $n$ steps ahead as the target.
+    \item Compute the desired velocity components along the tangent plane.
+    \item Compute desired yaw and pitch such that the surge axis aligns with the net normal.
+    \item Use the unchanged surge controller to maintain distance $x_d$.
+\end{enumerate}
+
+\subsection{Mathematical Formulation}
+
+\subsubsection*{Rotation of Waypoints Into the Net Plane}
+
+Each waypoint is given in the path frame:
+\[
+W_i^P = [0, \, y_i^P, \, z_i^P]^T.
+\]
+
+The corresponding coordinates in the net plane are
+
+\[
+W_{i,f} = 
+\begin{bmatrix}
+t_f & b_f
+\end{bmatrix}
+\begin{bmatrix}
+y_i^P \\ z_i^P
+\end{bmatrix}.
+\]
+
+This replaces the original projection into the $(y,z)$ plane.
+
+\subsubsection*{Nearest-Point Selection (Pure Pursuit)}
+
+Let the current position expressed in the net plane be
+
+\[
+p_f =
+\begin{bmatrix}
+(p - p_0) \cdot t_f \\[3pt]
+(p - p_0) \cdot b_f
+\end{bmatrix}.
+\]
+
+For each of the next $k$ rotated waypoints $W_{i,f}$ we compute
+
+\[
+d_i = \| p_f - W_{i,f} \|.
+\]
+
+The nearest waypoint is
+
+\[
+j^\star = \arg\min_i d_i.
+\]
+
+The Pure Pursuit target point becomes
+
+\[
+p_{d,f} = W_{j^\star + n, f}.
+\]
+
+\subsubsection*{Tangential Plane Error and Desired Velocity}
+
+The tracking error in the net plane is
+
+\[
+e_f = p_f - p_{d,f} =
+\begin{bmatrix}
+e_t \\ e_b
+\end{bmatrix}.
+\]
+
+The desired velocity in the tangent plane is
+
+\[
+v_{f,d} = -k_g \frac{e_f}{\|e_f\|}.
+\]
+
+Transforming this back into NED gives
+
+\[
+v_d^n = v_{t,d}\, t_f \;+\; v_{b,d}\, b_f.
+\]
+
+These become desired sway and heave after rotation to body frame.
+
+\subsubsection*{Orientation Control Using Net Normal}
+
+Yaw and pitch follow directly from the net normal:
+
+\[
+\psi_d = \atan2(n_{f,y},\, n_{f,x}),
+\qquad
+\theta_d = -\arcsin(n_{f,z}).
+\]
+
+\subsubsection*{Surge Control (Unchanged)}
+
+Surge distance control remains identical to the original chapter:
+
+\[
+e_x = x - x_d,
+\qquad
+u_d = -K_{p1} e_x - K_{d1} u.
+\]
+
+The full desired NED velocity is
+
+\[
+v_d^n =
+\begin{bmatrix}
+u_d \\
+(v_{t,d} t_f + v_{b,d} b_f)_y \\
+(v_{t,d} t_f + v_{b,d} b_f)_z
+\end{bmatrix}.
+\]
+
+\subsection{Summary}
+
+This chapter introduced a modification of the guidance system in which the predefined path in
+the path frame is rotated into the local net plane before computing tracking commands. The 
+Pure Pursuit structure is preserved, but instead of navigating in the global $yz$-plane, the ROV 
+navigates inside the tangent plane of the net surface. The surge distance controller is unchanged,
+ensuring correct standoff, while the net normal determines yaw and pitch.

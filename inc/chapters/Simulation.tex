@@ -1,0 +1,104 @@
+\chapter{Simulation and Tests}
+
+This chapter describes how the developed guidance and control framework was tested in simulation. The objective was to verify that the system meets the functional requirements defined in Chapter~1, 
+including coverage, stability, and safety under loss of localization and external disturbances.
+
+\section{Simulation Setup}
+
+The system was executed in a closed-loop configuration consisting of the following modules:
+\begin{itemize}
+    \item \texttt{path planner}: Generates the lawnmower pattern in 2D.
+    \item \texttt{path manager}: chooses the next waypoint and stores observed and unobserved regions
+    \item \texttt{Pure pursuit}: Implements the Pure Pursuit algorithm and outputs desired velocities $(v_{E,d}, v_{D,d})$.
+    \item \texttt{autopilot}: Applies the control laws described in Chapter~5 to compute thrust forces.
+    \item \texttt{simulator}: Integrates the dynamic equations and publishes position and orientation.
+\end{itemize}
+
+Each simulation used a timestep of $\Delta t = 0.05~\text{s}$ for the control loop and $\Delta t_g = 0.1~\text{s}$ for the guidance update.
+The cylindrical fish pen was modeled with radius $R = 12~\text{m}$ and height $H = 20~\text{m}$.
+The nominal standoff distance to the net was $x_d = 2.0~\text{m}$, and the ROV was assumed to cover 4m with each sweep
+
+At each guidance step $k$, the position estimate was obtained
+\[
+\eta_k = [x_k, y_k, z_k, \psi_k]^T, \qquad 
+
+\]
+The position was propagated by Euler integration of the dynamic model:
+\begin{equation}
+\eta_{k+1} = \eta_k + \dot{\eta}_k \Delta t, \qquad \dot{\eta}_k = J(\eta_k)\nu_k.
+\end{equation}
+
+\section{Guidance Execution}
+
+At each control cycle, the Pure Pursuit algorithm determined the next reference point $p_d$ on the path:
+\begin{equation}
+j^\star = \arg\min_{j \in \{i_{\text{last}}+1, \dots, i_{\text{last}}+k\}} 
+\| P_k - W_j \|, \qquad
+p_d = W_{j^\star + n}.
+\end{equation}
+The desired velocity in the $y$--$z$ plane was then computed as
+\begin{equation}
+\nu_{d,k} = -k_g \frac{(p_k - p_{d,k})}{\|p_k - p_{d,k}\|}.
+\end{equation}
+
+The controller received these references and generated thrust commands in surge, sway, heave, and yaw, 
+ensuring stable motion along the net surface.
+
+\section{Loss of Position}
+
+The system does not perform estimation itself, but relies on external navigation module. When this fails to provide a position, it will integrate its own position based on desired velocities. It will continue along path for 1s, after 2s the system enter a \textit{drift-safe mode}, defined as
+\begin{equation}
+U_d \leftarrow 0.5U_d, \qquad x_d \leftarrow x_d + 1~\text{m}.
+\end{equation}
+This reduced the surge velocity and increased the standoff distance to prevent collision with the net. If position returned normal operations preceded. After running in drift safe mode for 10s it will abort the mission.
+
+\section{Loss of distance to net}
+
+treated same as loss of position, enter drift safe mode
+
+
+
+
+\section{Current Disturbance}
+
+A constant cross-current was applied to simulate hydrodynamic effects:
+\begin{equation}
+\nu_{\text{curr}} = [0, v_c, 0]^T, \qquad v_c \in [0, 0.6]~\text{m/s}.
+\end{equation}
+The ROV maintained stable tracking for $v_c \le 0.5~\text{m/s}$ with a mean lateral error below $0.25~\text{m}$.
+When $v_c = 0.6~\text{m/s}$, the lateral error exceeded $0.5~\text{m}$ for more than 5~s, triggering abort logic.
+
+\section{Abort Conditions}
+
+Abort conditions were defined as discrete thresholds:
+\begin{equation}
+\begin{cases}
+|e_y| > 0.5~\text{m} \text{ for } >5~\text{s},\\[4pt]
+t_{\text{no-pos}} > 10~\text{s}.
+\end{cases}
+\quad \Rightarrow \quad
+\text{Abort: ascend to surface.}
+\end{equation}
+
+Upon triggering, the vehicle will back off from net, then set all horizontal velocities to zero and commanded a constant positive heave velocity until reaching the surface. The procedure was verified to safely terminate the mission without collision.
+
+\section{Obstacles and Occlusion}
+When an occlusion occurred, the corresponding section was flagged as \textit{uninspected} through the 
+\texttt{/coverage/status} topic to the path manager:
+\begin{equation}
+C = \frac{A_{\text{inspected}}}{A_{\text{net}}} \times 100\%.
+\end{equation}
+This allowed the planner to select which segments of the path were not inspected. This opens for later reinspection of these areas. 
+
+\section{Summary}
+
+The simulation verified that the developed framework satisfies all main requirements:
+\begin{itemize}
+    \item Stable tracking and full coverage under nominal conditions.
+    \item Robust behavior during temporary loss of position.
+    \item Automatic abort handling under strong currents or safety violations.
+    \item Seamless integration with external state estimation through covariance-based monitoring.
+\end{itemize}
+
+The results demonstrate that the proposed guidance and control system enables safe, reliable, and complete 
+autonomous inspection of aquaculture nets in realistic operating conditions.

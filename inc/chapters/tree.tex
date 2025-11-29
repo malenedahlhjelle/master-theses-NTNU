@@ -1,0 +1,47 @@
+
+% --- Figure ---
+\begin{figure}[t]
+\centering
+\scalebox{0.3}{% adjust 0.9 -> 0.8 if you need it smaller
+\begin{forest}
+for tree={
+  draw,
+  rounded corners,
+  align=center,
+  minimum width=24mm,
+  text width=26mm,
+  font=\scriptsize\bfseries,
+  edge={-},
+  s sep=6mm,          % sibling (horizontal) separation
+  l sep=6mm,          % level (vertical) separation
+}
+% ===== ROOT =====
+[Path Planning
+  % ===== Global / Graph & Geometric =====
+  [Global / Graph \& Geometric
+    [A* \& FT-A* \\(+ Dubins) \refn{3}]
+    [D* / Variants \\(reviewed in \refn{5}]
+    [Trajectory smoothing \\(post-opt)]
+  ]
+  % ===== Coverage (CPP) =====
+  [Coverage (CPP)
+    [3D CPP +\\Replanning \refn{15}]
+    [Complete Coverage\\GBNN \refn{14}]
+    [$\varepsilon^\star$ Online CPP \refn{16}]
+  ]
+  % ===== Learning / Data-driven =====
+  [Learning / Data-driven
+    [RL/DRL trends \\(surveys) \refn{5}]
+    [Surrogate current-\\aware planning \refn{7}]
+  ]
+  % ===== Hybrid / Adaptive =====
+  [Hybrid / Adaptive
+    [Net-shape adaptive\\planner (pen est.) \refn{8}]
+    [Current-aware cost\\terms in planners \refn{15}]
+  ]
+ ]
+\end{forest}
+}% end scalebox
+\caption{Method map of \emph{path planning} approaches only. Superscripts refer to references [1]–[20].}
+\label{fig:pathplanning-map}
+\end{figure}

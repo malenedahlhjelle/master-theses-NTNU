@@ -1,0 +1,152 @@
+\chapter{ROV Dynamics and Control Laws}
+
+\section{Kinematic and Dynamic Model}
+
+The vehicle kinematics are expressed as
+\[
+\dot{\boldsymbol{\eta}} = J(\boldsymbol{\eta})\,\mathbf{v},
+\]
+
+\begin{equation}
+M\dot{\boldsymbol{\nu}} + D\boldsymbol{\nu} + G(\boldsymbol{\eta}) = \boldsymbol{\tau},
+\end{equation}
+where
+\[
+M = \text{diag}(m_{11}, m_{22}, m_{33}, m_{44}, m_{55}, m_{66}), \quad
+D = \text{diag}(d_{11}, d_{22}, d_{33}, d_{44}, d_{55}, d_{66}),
+\]
+and $G(\boldsymbol{\eta})$ contains the restoring terms in roll and pitch. Since the AUV is neutrally bouyant, one does not need to account for the g vector in the other equations.
+
+where $\boldsymbol{\eta} = [x,\,y,\,z,\,\phi,\,\theta,\,\psi]^T$ is the generalized position in the NED frame, 
+and $\boldsymbol{\nu} = [u,\,v,\,w,\,p,\,q,\,r]^T$ is the velocity vector in the body frame. The AUV is controlled by $\boldsymbol{\tau} = [\tau_1, \tau_2,\tau_3, \tau_4,\tau_5,\tau_6]$. This vector defines the forces to be applied by the thrusters computed by the control system in the 6DOF.
+
+\section{Dynamic Equations of Motion}
+
+Approximating the AUV model as a decoupled mass-damper-spring systems. This is a good assumption because we are moving slowly, which means we will have weak coupling between the hydrodynamic coefficients in the degress of freedom, and the linear damping terms will dominate over the quadratic ones. We are also operating in the upright position, with small angles in roll and pitch. the 6-DOF dynamic equations for the AUV are
+\begin{align*}
+m_{11}\dot{u} + d_{11}u &= \tau_1, \\[4pt]
+m_{22}\dot{v} + d_{22}v &= \tau_2, \\[4pt]
+m_{33}\dot{w} + d_{33}w &= \tau_3, \\[4pt]
+m_{44}\dot{p} + d_{44}p + W(z_g - z_b)\phi &= \tau_4, \\[4pt]
+m_{55}\dot{q} + d_{55}q + W(z_g - z_b)\theta &= \tau_5, \\[4pt]
+m_{66}\dot{r} + d_{66}r &= \tau_6,
+\end{align*}
+where $m_{ii}$ are the rigid body and added mass terms, $d_{ii}$ are the linear damping coefficients,
+and $W= mg$ represents the weight. 
+
+\subsection*{Transformation from NED to Body Frame}
+
+The guidance node provides desired velocities in the NED frame for motion
+along the net surface, i.e.\ in the east--down plane:
+\[
+\mathbf{v}_d^n =
+\begin{bmatrix}
+v_{E,d} \\[4pt]
+v_{D,d}
+\end{bmatrix}.
+\]
+The ROV controller, however, operates in the body-fixed frame, where the corresponding
+velocities are the sway and heave components,
+\[
+\mathbf{v}_d^b =
+\begin{bmatrix}
+v_d \\[4pt]
+w_d
+\end{bmatrix}.
+\]
+
+The transformation between the two is obtained from the vehicle's yaw-angle~$\psi$,
+assuming small roll and pitch angles ($\phi,\theta \approx 0$):
+\[
+\mathbf{v}_d^b = R_{n,2D}^b(\psi)\,\mathbf{v}_d^n,
+\qquad
+R_{n,2D}^b(\psi) =
+\begin{bmatrix}
+\cos\psi & 0 \\[4pt]
+0 & 1
+\end{bmatrix}.
+\]
+However, since the AUV moves primarily along the net (east--down directions)
+and the surge axis is used for distance control, the rotation is simplified
+to include only the vertical component:
+\[
+\begin{bmatrix}
+v_d \\[4pt] w_d
+\end{bmatrix}
+=
+\begin{bmatrix}
+v_{E,d} \\[4pt] v_{D,d}
+\end{bmatrix}.
+\]
+
+
+These are then used as inputs to the corresponding control laws.
+
+\subsection*{Control Laws}
+We let the body $x$-axis point toward the net. The primary task in surge is therefore
+to regulate the distance to the net to zero. This is done with a position–damping
+controller in surge, while sway and heave are controlled in velocity.
+
+\begin{align}
+\tau_1 &= -K_{p_1}\,(x - x_d) - K_{d_1}\,u + K_{i_1}*e_{int}, \label{eq:surge-net}\\[4pt]
+\tau_2 &= -K_{p_2}\,(v - v_d) \label{eq:sway-vel}\\[4pt]
+\tau_3 &= -K_{p_3}\,(w - w_d) \label{eq:heave-vel}\\[4pt]
+\tau_4 &= 0, \\[4pt]
+\tau_5 &= 0, \\[4pt]
+\tau_6 &= -K_{p_6}\,(\psi - \psi_d) - K_{d_6}\,r - K_{i_6}\psi_{int}. \label{eq:yaw}
+\end{align}
+
+Here $x$ is the measured distance to the net expressed in the surge direction, this distance is expressed in NED frame.
+The term $-K_{d_1}u$ provides damping in surge to avoid collision with the net.
+The sway and heave channels, track body-frame velocity commands $(v_d, w_d)$ delivered by the guidance node, enabling motion along and up/down the net while the surge controller maintains the distance. The $\psi_d$ is provided by the guidance node, also in the simplified case set to zero.
+
+\subsection{Controller Tuning}
+
+The proportional and derivative gains are selected based on the decoupled second-order mass--damper--spring model for each degree of freedom. 
+For the surge and yaw axes, the dynamics are described by
+\begin{equation}
+    m_i \dot{v}_i + d_i v_i = \tau_i,
+\end{equation}
+with a PD control law
+\begin{equation}
+    \tau_i = -K_{p_i}(v_i - v_{d_i}) - K_{d_i}v_i.
+\end{equation}
+The resulting closed-loop dynamics yield
+\begin{equation}
+    m_i \dot{v}_i + (d_i + K_{d_i})v_i + K_{p_i}(v_i - v_{d_i}) = 0,
+\end{equation}
+which corresponds to a second-order system with
+\begin{equation}
+    \omega_{n_i} = \sqrt{\frac{K_{p_i}}{m_i}}, \qquad 
+    \zeta_i = \frac{d_i + K_{d_i}}{2\sqrt{m_i K_{p_i}}}.
+\end{equation}
+The gains can thus be chosen as
+\begin{equation}
+    K_{p_i} = m_i \omega_{n_i}^2, \qquad 
+    K_{d_i} = 2 m_i \zeta_i \omega_{n_i} - d_i.
+\end{equation}
+
+For sway and heave, only velocity control is required. 
+The control input is therefore simplified to
+\begin{equation}
+    \tau_i = -K_{d_i}(v_i - v_{d_i}),
+\end{equation}
+leading to the first-order closed-loop dynamics
+\begin{equation}
+    m_i \dot{v}_i + (d_i + K_{d_i})v_i = K_{d_i}v_{d_i},
+\end{equation}
+with time constant
+\begin{equation}
+    T_i = \frac{m_i}{d_i + K_{d_i}}.
+\end{equation}
+For roll and pitch, the restoring moments $W(z_g - z_b)\phi$ and $W(z_g - z_b)\theta$ stabilize the vehicle around zero angles, and no active control ($\tau_4 = \tau_5 = 0$) is required.
+
+
+
+\section{Summary}
+
+The equations above define a decoupled 6-DOF AUV model with independent control
+laws for surge, sway, heave, and yaw.
+For roll and pitch, the restoring terms naturally stabilize the vehicle around
+zero angles, and no active control ($\tau_4 = \tau_5 = 0$) is required.
+

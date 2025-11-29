@@ -1,0 +1,1026 @@
+% \section{Net-Relative Motion and Circular Nets}
+
+% In this work, all guidance and control are formulated \textbf{relative to the net}, rather than the 
+% global NED frame. The goal is to ensure that the inspection pattern (up–across–down–across) follows 
+% the geometry of the net surface even if the cage moves, rotates, or deforms under environmental load.
+
+% \subsection{Net Frame Definition}
+
+% We define a net-fixed coordinate frame $\{\mathcal{N}_\text{net}\}$ that moves with the net:
+% \begin{itemize}[noitemsep]
+%     \item $x_\text{net}$: outward normal direction (used for standoff control),
+%     \item $y_\text{net}$: horizontal direction along the net surface,
+%     \item $z_\text{net}$: vertical direction along the net (positive downward).
+% \end{itemize}
+
+% In the simplified planar simulation used in this project, the net frame is aligned with NED:
+% \[
+% x_\text{net} \parallel x_\text{NED},\qquad
+% y_\text{net} \parallel y_\text{NED},\qquad
+% z_\text{net} \parallel z_\text{NED},
+% \]
+% but all motion and control laws are interpreted as \emph{net-relative}: the vehicle controls its 
+% standoff in $x_\text{net}$ and performs the scanning motion in the $(y_\text{net},z_\text{net})$–plane.
+
+% \subsection{Extension to Circular Nets}
+
+% For a circular cage, the net is modeled as a vertical cylinder. The net-relative position is 
+% parameterized by
+% \[
+% (r,\,\varphi,\,z_\text{net}),
+% \]
+% where
+% \begin{itemize}[noitemsep]
+%     \item $r$ is the radial distance to the net (used for standoff),
+%     \item $\varphi$ is the angular coordinate around the cage (used for horizontal progression),
+%     \item $z_\text{net}$ is the vertical coordinate (used for up/down scanning).
+% \end{itemize}
+
+% The scanning pattern \emph{up–across–down–across} is preserved by interpreting:
+% \begin{itemize}[noitemsep]
+%     \item ``up/down''  → motion in $z_\text{net}$,  
+%     \item ``across''   → motion in $\varphi$ (replacing linear $y$),  
+%     \item standoff     → radial control $r \rightarrow r_d$.
+% \end{itemize}
+
+% The horizontal step size $SW$ in the planar case becomes an angular increment $\Delta\varphi$ for 
+% circular nets, so the vehicle moves from $\varphi_d$ to $\varphi_d+\Delta\varphi$ during each 
+% horizontal segment.
+
+% \subsection{Net-Relative Guidance and Control}
+
+% Both the Pure Pursuit guidance system and the mode controller operate on states expressed in 
+% $\{\mathcal{N}_\text{net}\}$. Pure Pursuit provides desired motion direction in the net plane, while 
+% the mode controller enforces structured scanning motion with constant speed along each segment.
+
+% For circular nets the desired net-plane velocity is
+% \[
+% \mathbf{v}_{\text{net},d} =
+% \begin{bmatrix}
+% v_{t,d} \\[4pt]
+% v_{z,d}
+% \end{bmatrix},
+% \]
+% where $v_{t,d}$ is the tangential velocity (across) and $v_{z,d}$ is the vertical velocity (up/down).  
+% Radial motion $v_{r,d}$ is controlled independently to maintain the desired standoff distance.
+
+% \subsection{Net Normal From Perception, but PID in $(y,z)$ Is Retained}
+
+% In the real system, the outward net-normal vector $\mathbf{n}_\text{net}$ is estimated from the 
+% camera-based perception system. This normal is used to:
+% \begin{itemize}[noitemsep]
+%     \item regulate the standoff in $x_\text{net}$,
+%     \item align the yaw and pitch so the camera faces the net.
+% \end{itemize}
+
+% However, \emph{motion parallel to the net is still controlled using decoupled PID loops in 
+% $(y_\text{net},z_\text{net})$}, as in the rectangular case. That is:
+
+% \begin{itemize}[noitemsep]
+%     \item When moving vertically (``up'' or ``down''), a PID controller holds the horizontal 
+%           position $y_\text{net}$:
+%           \[
+%           \tau_y = -K_{p,y}(y_\text{net}-y_d) - K_{d,y}\dot{y}_\text{net} - K_{i,y}\int(y_\text{net}-y_d)\,dt.
+%           \]
+
+%     \item When moving horizontally (``across''), a PID controller holds the depth $z_\text{net}$:
+%           \[
+%           \tau_z = -K_{p,z}(z_\text{net}-z_d) - K_{d,z}\dot{z}_\text{net} - K_{i,z}\int(z_\text{net}-z_d)\,dt.
+%           \]
+% \end{itemize}
+
+% Thus, although the net orientation is available through $\mathbf{n}_\text{net}$, the mode controller 
+% implements the scanning motion exactly as in the rectangular case: \emph{hold one axis with PID while 
+% moving along the other}.
+
+% \subsection{Tangential Motion for Circular Nets}
+
+% For circular nets, the horizontal progression is expressed as angular motion. The desired tangential 
+% speed is kept constant:
+% \[
+% v_{t,d} = v_{\text{nominal}}.
+% \]
+
+% The angular tracking error is
+% \[
+% e_\varphi = \text{wrap}(\varphi - \varphi_d),
+% \]
+% and a PD or PI controller governs angular progress along the cage:
+% \[
+% \omega_d = -K_{p,\varphi} e_\varphi - K_{d,\varphi}\dot{e}_\varphi.
+% \]
+
+% This angular rate is converted to desired $y$/$z$ velocities using the cylindrical geometry, but the 
+% cross-track axis is still regulated via PID as described above.
+
+% \subsection{Radial (Standoff) Control}
+
+% The standoff is controlled independently using the estimated normal direction. For circular nets,
+% \[
+% r \rightarrow r_d
+% \]
+% is enforced using a PI/PID controller:
+% \[
+% v_{r,d} = -K_{p,r} e_r - K_{d,r}\dot{e}_r - K_{i,r}\int e_r\,dt,
+% \quad
+% e_r = r - r_d.
+% \]
+
+% \subsection{Mode Switching}
+
+% The same scanning pattern is used for both rectangular and circular nets:
+% \[
+% \text{down} \rightarrow \text{across} \rightarrow \text{up} \rightarrow \text{across}.
+% \]
+
+% For circular nets, the ``across'' condition becomes:
+% \[
+% |\text{wrap}(\varphi - \varphi_d)| < \epsilon_\varphi,
+% \]
+% while ``up'' and ``down'' transitions use the same depth thresholds as before.
+
+% \subsection{Combined Net-Relative Command}
+
+% The complete desired motion in the net frame is
+% \[
+% \mathbf{v}_{\text{net},d}
+% =
+% \begin{bmatrix}
+% v_{r,d} \\[4pt]
+% v_{t,d} \\[4pt]
+% v_{z,d}
+% \end{bmatrix},
+% \]
+% where $(v_{t,d},v_{z,d})$ follow the scanning pattern and the cross-track axis is always held by PID.
+
+% This ensures that the up–across–down–across pattern is executed relative to the net geometry, even 
+% for circular nets, while preserving the simple and robust decoupled PID structure of the original 
+% mode controller.
+% \subsection{Vertical Scanning Without Sideways Body Motion}
+
+% During the downward scanning mode, the objective is that the vehicle moves as a straight line 
+% in its \emph{own} body frame: it should descend with a constant vertical speed and experience 
+% no sideways motion. At the same time, the global net-relative position in $y_\text{net}$ is 
+% allowed to change due to currents or slow motion of the cage.
+
+% Let $[u_b, v_b, w_b]^T$ denote the body-frame translational velocities in surge, sway, and heave,
+% respectively. In the downward scan mode we impose the following velocity-level objectives:
+% \[
+% v_b \rightarrow 0,
+% \qquad
+% w_b \rightarrow w_d > 0,
+% \]
+% where $w_d$ is the desired constant scan speed.
+
+% The sway motion is then controlled directly in the body frame by a PI/PID law on $v_b$:
+% \[
+% e_v = v_b - 0,
+% \qquad
+% \tau_2 = -K_{p,v}\, e_v - K_{d,v}\, \dot{e}_v - K_{i,v} \int e_v \, dt.
+% \]
+% This integral action on the body-frame sway velocity compensates for steady currents and 
+% thruster asymmetries, and ensures that the vehicle does not drift sideways in its own frame 
+% while scanning down the net.
+
+% The vertical motion is controlled independently by regulating the body-frame heave velocity $w_b$ 
+% towards the desired scan speed $w_d$:
+% \[
+% e_w = w_b - w_d,
+% \qquad
+% \tau_3 = -K_{p,w}\, e_w - K_{d,w}\, \dot{e}_w - K_{i,w} \int e_w \, dt.
+% \]
+
+% With this formulation, the vehicle trajectories in the global $(y_\text{net}, z_\text{net})$–plane 
+% are not constrained to follow a fixed $y_\text{net}$ during the descent. Instead, the vehicle 
+% follows a straight line in its body frame, while the net-relative position may shift slowly due 
+% to environmental disturbances. At the bottom corner, the mode controller updates the reference 
+% for the next horizontal segment (for example by snapping to the nearest path corner), thereby 
+% re-synchronizing the scan pattern with the net.
+
+% \section{Conditions for Straight-Line Net-Relative Descent}
+
+% The downward scanning strategy introduced in this work commands the AUV to maintain
+% \[
+% v_b = 0, \qquad w_b = w_d > 0,
+% \]
+% in the body frame while keeping the vehicle perfectly aligned with the net normal. 
+% In this section, we show mathematically that under these conditions the vehicle will 
+% always follow a straight vertical line relative to the net, regardless of slow cage motion 
+% or environmental drift, as long as the alignment condition is maintained.
+
+% \subsection{Kinematic Relationship Between Body-Frame and Net-Frame Velocities}
+
+% Let $\mathbf{v}_b = [u_b, v_b, w_b]^T$ denote the velocity in the body frame, and let 
+% $R_{b}^{n}$ denote the rotation matrix from body to net frame. Then the net-relative velocity is
+% \[
+% \mathbf{v}_{\text{net}} = R_{b}^{n} \, \mathbf{v}_{b}.
+% \]
+% Since only motion in the $(y_\text{net},z_\text{net})$ plane is relevant during scanning, we project
+% \[
+% \mathbf{v}_{\parallel,\text{net}} 
+% =
+% \begin{bmatrix}
+% y_\text{net}' \\[4pt]
+% z_\text{net}'
+% \end{bmatrix}
+% =
+% \begin{bmatrix}
+% \mathbf{e}_{y_\text{net}}^T \\[4pt]
+% \mathbf{e}_{z_\text{net}}^T
+% \end{bmatrix}
+% R_{b}^{n}\mathbf{v}_{b}.
+% \]
+
+% \subsection{Perfect Alignment With the Net}
+
+% Perfect alignment means that the body $x$-axis is colinear with the net normal:
+% \[
+% \mathbf{e}_{x_b} \parallel \mathbf{n}_{\text{net}}.
+% \]
+% Equivalently,
+% \[
+% R_{b}^{n} =
+% \begin{bmatrix}
+% \mathbf{n}_{\text{net}} & \mathbf{t}_{\text{net}} & \mathbf{e}_{z_\text{net}}
+% \end{bmatrix},
+% \]
+% where $\mathbf{t}_{\text{net}}$ is the horizontal tangent direction of the net.
+
+% Under perfect alignment, the body-frame sway axis $\mathbf{e}_{y_b}$ lies exactly in the net plane.
+
+% This implies:
+% \[
+% \mathbf{e}_{y_\text{net}}^T R_{b}^{n} = \mathbf{e}_{y_b}^T,
+% \qquad
+% \mathbf{e}_{z_\text{net}}^T R_{b}^{n} = \mathbf{e}_{z_b}^T,
+% \]
+% meaning the body-frame $v_b$ and $w_b$ map directly into the net's $y_\text{net}$ and $z_\text{net}$ 
+% directions.
+
+% \subsection{Straight-Line Descent Condition}
+
+% With $v_b = 0$ enforced by a PI/PID controller, the velocity projected onto the net becomes:
+% \[
+% y_\text{net}' = \mathbf{e}_{y_\text{net}}^T R_{b}^{n}\mathbf{v}_b
+% = \mathbf{e}_{y_b}^T \mathbf{v}_b
+% = v_b
+% = 0.
+% \]
+% Thus:
+% \[
+% y_\text{net}' = 0.
+% \]
+
+% Meanwhile, the vertical velocity is
+% \[
+% z_\text{net}' = \mathbf{e}_{z_\text{net}}^T R_{b}^{n}\mathbf{v}_b
+% = \mathbf{e}_{z_b}^T \mathbf{v}_b
+% = w_b
+% = w_d.
+% \]
+
+% Hence, under perfect alignment:
+% \[
+% \begin{bmatrix}
+% y_\text{net}' \\[4pt]
+% z_\text{net}'
+% \end{bmatrix}
+% =
+% \begin{bmatrix}
+% 0 \\[4pt]
+% w_d
+% \end{bmatrix},
+% \]
+% which is the equation of a straight vertical line in the net frame.
+
+% \subsection{Influence of Cage Drift and Currents}
+
+% Even if the global frame moves due to currents or slow displacements of the cage, the net-relative 
+% motion remains unchanged. Let the cage (and thus the net frame) move with velocity $\mathbf{v}_{c}$ 
+% in NED. The net-relative velocity is
+% \[
+% \mathbf{v}_{\text{net}} = R_{b}^{n}\mathbf{v}_{b} - \mathbf{v}_{c}.
+% \]
+
+% Since the cage motion $\mathbf{v}_{c}$ affects both the vehicle and the net frame equally, it cancels 
+% out in the relative motion:
+
+% - the commanded $v_b = 0$ ensures no sideways drift \emph{relative to the net},  
+% - the vertical scan speed $w_d$ is preserved relative to the net,  
+% - global $y$ may drift but $y_\text{net}$ does not,  
+% - mode switching based on $z_\text{net}$ still occurs correctly.
+
+% Thus the vehicle remains on a straight vertical line in the net frame even if the cage moves.
+
+% \subsection{Stability of the Zero-Sway Condition}
+
+% The sway velocity control law
+% \[
+% \tau_y = -K_{p,v}\, v_b - K_{d,v}\, \dot{v}_b - K_{i,v} \int v_b \, dt
+% \]
+% drives $v_b \rightarrow 0$ exponentially provided the closed-loop dynamics are stable and the 
+% integrator compensates for steady-state disturbances.
+
+% Because the mapping between $v_b$ and $y_\text{net}'$ is linear and invertible under alignment,
+% \[
+% v_b = 0 \quad\Longleftrightarrow\quad y_\text{net}' = 0,
+% \]
+% the zero-sway condition is equivalent to zero sideways motion in the net frame.
+
+% Therefore, the cross-track error remains identically zero during the descent.
+
+% \subsection{Conclusion}
+
+% If the AUV maintains perfect alignment with the net normal, then:
+% \begin{enumerate}
+%     \item enforcing $v_b = 0$ guarantees zero lateral motion in the net frame,
+%     \item enforcing $w_b = w_d$ guarantees constant vertical scan speed in the net frame,
+%     \item global drift in NED does not affect net-relative motion,
+%     \item the trajectory in the $(y_\text{net},z_\text{net})$ plane is a straight line.
+% \end{enumerate}
+
+% Thus the proposed control structure achieves a provably straight vertical descent relative to the 
+% net, even under environmental disturbances, provided alignment with the net normal is maintained.
+
+% \subsection{Practical Limitations: Net Motion Is Not Observable From IMU Alone}
+
+% The analysis above shows that, under perfect alignment and in the absence of relative motion 
+% between the net frame and the inertial frame, enforcing
+% \[
+% v_b = 0, \qquad w_b = w_d
+% \]
+% leads to a straight-line descent in the $(y_\text{net}, z_\text{net})$–plane. However, this result 
+% relies on an implicit assumption: that we know the motion of the net relative to the inertial frame, 
+% or that this motion is negligible on the time scale of a single vertical scan.
+
+% In practice, the AUV is equipped with an IMU (and possibly a DVL), which measure:
+% \begin{itemize}[noitemsep]
+%     \item angular rates and specific forces in the body frame,
+%     \item and, after integration and aiding, the \emph{vehicle's} velocity and pose in an inertial frame 
+%           (or relative to the seabed or water mass).
+% \end{itemize}
+% These sensors do \emph{not} directly provide the motion of the net or the cage. As a consequence, the 
+% decomposition
+% \[
+% \mathbf{v}_{\text{net}} = R_b^n \mathbf{v}_b - \mathbf{v}_c,
+% \]
+% where $\mathbf{v}_c$ is the cage/net velocity, is not observable from the IMU alone: both the AUV and 
+% the net may move under the influence of currents, and the IMU only sees the AUV motion.
+
+% This means that the controller cannot \emph{separate} how much of the measured motion comes from the 
+% vehicle or from the net. Therefore, the straight-line property derived above is a property of the 
+% \emph{relative kinematics}, not something that can be guaranteed purely from IMU data without 
+% additional information about the net.
+% \subsection{Role of Perception in Net-Relative Alignment}
+
+% To achieve net-relative motion in practice, the system relies on the perception module, which estimates:
+% \begin{itemize}[noitemsep]
+%     \item the net normal direction $\mathbf{n}_\text{net}$,
+%     \item and, in some configurations, the approximate pose of the net relative to the vehicle.
+% \end{itemize}
+
+% This information is used to:
+% \begin{itemize}[noitemsep]
+%     \item align the AUV such that the body $x$–axis is approximately colinear with $\mathbf{n}_\text{net}$,
+%     \item update the estimate of the net-relative position, especially at the top and bottom corners.
+% \end{itemize}
+
+% In the current implementation, it is assumed that:
+% \begin{enumerate}
+%     \item the net motion during a single vertical scan is slow compared to the commanded vertical 
+%           scan speed $w_d$,
+%     \item the perception system can periodically correct the net-relative position (for example when 
+%           detecting the top or bottom of the net).
+% \end{enumerate}
+
+% Under these assumptions, enforcing zero body-frame sway $v_b \approx 0$ and a constant heave velocity 
+% $w_b \approx w_d$ leads to an approximately straight scan line in the net frame, and any residual 
+% net-relative drift can be corrected at the corners when updating the reference for the next segment.
+
+% \subsection{Global Position Is Not Required}
+
+% The inspection mission is formulated entirely in the net frame. The objective is not to follow a 
+% trajectory in global NED coordinates, but to move along the net surface until the vehicle returns 
+% to the starting location on the net. For this reason, absolute position estimates are unnecessary. 
+% The only variables that must be controlled are those that describe motion \emph{relative to the net}.
+
+% Let $(y_\text{net}, z_\text{net})$ denote coordinates along the net, and let $x_\text{net}$ be the 
+% standoff direction. The scanning pattern is the repeated sequence
+% \[
+% \text{down} \rightarrow \text{across} \rightarrow \text{up} \rightarrow \text{across},
+% \]
+% and the mission is completed when the vehicle detects that it has reached the same angular position 
+% or the same local net feature from which it started.
+
+% However, because the IMU only measures the motion of the AUV and not the motion of the net, the 
+% relative drift between the cage and the vehicle is not observable from inertial sensors alone. 
+% Therefore the controller cannot determine how much of the measured motion originates from AUV 
+% movement and how much originates from slow deformation or drift of the net.
+
+% To ensure full coverage despite this limitation, the method relies on two assumptions:
+% \begin{enumerate}
+%     \item The net motion relative to the water is \emph{slow-varying} during a single vertical scan.
+%     \item The horizontal step size between scan lines is chosen conservatively with intentional 
+%           \emph{overlap}, so that small unmeasured net drift does not leave gaps in the inspection.
+% \end{enumerate}
+
+% Under these assumptions, controlling the body-frame sway velocity to zero during descent and 
+% maintaining a constant vertical scan speed ensures that each scan line follows an approximately 
+% straight path in the net frame. Any residual net-relative drift between scan lines is compensated 
+% by the planned overlap in the inspection pattern.
+
+% Because the final termination condition is defined in terms of returning to the initial location 
+% on the net (e.g., by detecting the same angular position or the same top corner), global drift is 
+% not required to be known or compensated. Net-relative sensing and slow, bounded drift are sufficient 
+% for successful completion of the mission.
+\section{Net-Relative Motion and Circular Nets}
+
+In this work, all guidance and control are formulated \textbf{relative to the net}, rather than the 
+global NED frame. The mission objective is not to follow an absolute trajectory in Earth-fixed 
+coordinates, but to traverse the entire net surface in a systematic pattern. The inspection is 
+complete once the vehicle returns to its starting location on the net. For this reason, global 
+position is neither required nor used.
+
+The coverage behavior is encoded directly in the \emph{mode controller} (see Chapter~\ref{ch:modecontroller}), 
+which switches between vertical and horizontal motion modes and regulates standoff and orientation.
+
+\subsection{Net Frame Definition}
+
+To express all motion relative to the net, we define a net-fixed coordinate frame 
+$\{\mathcal{N}_\text{net}\}$:
+\begin{itemize}[noitemsep]
+    \item $x_\text{net}$: outward normal from the net (standoff direction),
+    \item $y_\text{net}$: horizontal direction along the net surface,
+    \item $z_\text{net}$: vertical direction along the net (positive downward).
+\end{itemize}
+
+In the simplified planar simulation used in this thesis, the net frame is aligned with NED:
+\[
+x_\text{net} \parallel x_\text{NED},
+\qquad 
+y_\text{net} \parallel y_\text{NED},
+\qquad 
+z_\text{net} \parallel z_\text{NED},
+\]
+but all control laws are interpreted as \emph{net-relative}: the vehicle regulates its distance to 
+the net in $x_\text{net}$ and performs the scanning motion in the $(y_\text{net},z_\text{net})$–plane.
+
+\subsection{Extension to Circular Nets}
+
+For a circular cage, the net is modeled as a vertical cylinder and the net-relative position is 
+parameterized by
+\[
+(r,\,\varphi,\,z_\text{net}),
+\]
+where
+\begin{itemize}[noitemsep]
+    \item $r$ is the radial distance to the net surface (standoff),
+    \item $\varphi$ is the angular coordinate around the cage (horizontal progression),
+    \item $z_\text{net}$ is the vertical coordinate along the net.
+\end{itemize}
+
+The scanning pattern
+\[
+\text{down} \rightarrow \text{across} \rightarrow \text{up} \rightarrow \text{across}
+\]
+is preserved by interpreting:
+\begin{itemize}[noitemsep]
+    \item ``up/down''  $\rightarrow$ motion in $z_\text{net}$,
+    \item ``across''   $\rightarrow$ motion in $\varphi$ (replacing linear $y_\text{net}$),
+    \item standoff     $\rightarrow$ radial control $r \rightarrow r_d$.
+\end{itemize}
+
+The horizontal step size $SW$ in the planar case becomes an angular increment $\Delta\varphi$ for 
+circular nets, such that each horizontal segment moves the vehicle from $\varphi_d$ to 
+$\varphi_d + \Delta\varphi$.
+
+\subsection{Net-Relative Mode Controller}
+
+The mode controller (Chapter~\ref{ch:modecontroller}) defines four discrete motion modes:
+\begin{enumerate}
+    \item Mode 0: vertical descent along the net,
+    \item Mode 1: vertical ascent along the net,
+    \item Mode 2: horizontal motion at the bottom edge,
+    \item Mode 3: horizontal motion at the top edge.
+\end{enumerate}
+
+At any time, exactly one mode is active. Each mode specifies:
+\begin{itemize}[noitemsep]
+    \item which axis is used for progression (vertical or horizontal),
+    \item which axis is held at a reference using PID control,
+    \item how the standoff and yaw are regulated.
+\end{itemize}
+
+For planar nets, horizontal motion is expressed directly in $y_\text{net}$; for circular nets, 
+the same logic is applied to the angular coordinate $\varphi$.
+
+\subsection{Vertical Scanning Without Sideways Body Motion}
+
+During downward scanning (Mode~0), the objective is that the vehicle moves along a straight line 
+in its \emph{body frame}: it should descend with a constant vertical speed and experience no 
+sideways motion. The net-relative horizontal coordinate $y_\text{net}$ is allowed to drift slowly 
+over the duration of one scan, and any residual error between scan lines is handled by overlap.
+
+Let $[u_b, v_b, w_b]^T$ denote the body-frame translational velocities in surge, sway, and heave,
+respectively. In the downward scan mode we impose:
+\[
+v_b \rightarrow 0,
+\qquad
+w_b \rightarrow w_d > 0,
+\]
+where $w_d$ is the desired constant scan speed.
+
+The sway motion is controlled directly in the body frame by a PI/PID law:
+\[
+\tau_2 = -K_{p,v} v_b - K_{d,v}\dot{v}_b - K_{i,v}\!\int v_b\,dt,
+\]
+which suppresses steady sideways drift due to currents or thruster asymmetries.
+
+The vertical motion is controlled independently by regulating $w_b$ towards $w_d$:
+\[
+\tau_3 = -K_{p,w}(w_b - w_d) 
+         - K_{d,w}\dot{w}_b 
+         - K_{i,w}\!\int (w_b - w_d)\, dt.
+\]
+
+With this formulation, the vehicle follows a straight line in its own frame during descent.  
+The corresponding trajectory in $(y_\text{net},z_\text{net})$ will be approximately vertical as long 
+as alignment with the net normal is maintained and net motion is slow.
+
+At the bottom corner, the mode controller switches to Mode~2 and updates the reference for the 
+next horizontal segment (for example snapping to the nearest path corner in $y_\text{net}$ or 
+in $\varphi$), thereby re-synchronizing the scan pattern with the net.
+
+\section{Conditions for Straight-Line Net-Relative Descent}
+
+The downward scanning strategy described above commands the AUV to maintain
+\[
+v_b = 0, \qquad w_b = w_d > 0
+\]
+in the body frame while keeping the vehicle aligned with the net normal. Under these conditions, 
+and assuming the net is locally static during a scan, the vehicle follows a straight vertical line 
+relative to the net.
+
+\subsection{Kinematic Relationship Between Body-Frame and Net-Frame Velocities}
+
+Let $\mathbf{v}_b = [u_b, v_b, w_b]^T$ be the body-frame velocity, and let $R_{b}^{n}$ denote the 
+rotation matrix from body to net frame. The net-relative velocity is
+\[
+\mathbf{v}_{\text{net}} = R_{b}^{n}\mathbf{v}_{b}.
+\]
+Projecting onto the net plane:
+\[
+\mathbf{v}_{\parallel,\text{net}} 
+=
+\begin{bmatrix}
+y_\text{net}' \\[4pt]
+z_\text{net}'
+\end{bmatrix}
+=
+\begin{bmatrix}
+\mathbf{e}_{y_\text{net}}^T \\[4pt]
+\mathbf{e}_{z_\text{net}}^T
+\end{bmatrix}
+R_{b}^{n}\mathbf{v}_{b}.
+\]
+
+\subsection{Perfect Alignment With the Net}
+
+Perfect alignment means that the body $x$-axis is colinear with the net normal:
+\[
+\mathbf{e}_{x_b} \parallel \mathbf{n}_\text{net}.
+\]
+Then $R_{b}^{n}$ can be written such that
+\[
+R_{b}^{n} =
+\begin{bmatrix}
+\mathbf{n}_\text{net} & \mathbf{t}_\text{net} & \mathbf{e}_{z_\text{net}}
+\end{bmatrix},
+\]
+where $\mathbf{t}_\text{net}$ is the horizontal tangent and $\mathbf{e}_{z_\text{net}}$ the vertical net axis.
+
+In this case,
+\[
+\mathbf{e}_{y_\text{net}}^T R_{b}^{n} = \mathbf{e}_{y_b}^T,
+\qquad
+\mathbf{e}_{z_\text{net}}^T R_{b}^{n} = \mathbf{e}_{z_b}^T,
+\]
+so $v_b$ and $w_b$ map directly into $y_\text{net}'$ and $z_\text{net}'$.
+
+\subsection{Straight-Line Descent Condition}
+
+With $v_b = 0$ enforced:
+\[
+y_\text{net}' 
+= \mathbf{e}_{y_\text{net}}^T R_{b}^{n}\mathbf{v}_b
+= \mathbf{e}_{y_b}^T \mathbf{v}_b
+= v_b
+= 0.
+\]
+
+Meanwhile:
+\[
+z_\text{net}' 
+= \mathbf{e}_{z_\text{net}}^T R_{b}^{n}\mathbf{v}_b
+= \mathbf{e}_{z_b}^T \mathbf{v}_b
+= w_b
+= w_d.
+\]
+
+Hence,
+\[
+\begin{bmatrix}
+y_\text{net}' \\[4pt]
+z_\text{net}'
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 \\[4pt]
+w_d
+\end{bmatrix},
+\]
+which is the equation of a straight vertical line in the net frame.
+
+\subsection{Stability of the Zero-Sway Condition}
+
+The sway controller
+\[
+\tau_y = -K_{p,v}v_b - K_{d,v}\dot{v}_b - K_{i,v}\int v_b\,dt
+\]
+drives $v_b \rightarrow 0$ provided the closed-loop dynamics are stable. Because the mapping between 
+$v_b$ and $y_\text{net}'$ is linear and invertible under alignment,
+\[
+v_b = 0 \quad\Longleftrightarrow\quad y_\text{net}' = 0,
+\]
+zero-sway implies zero net-relative sideways motion during descent.
+
+\section{Practical Limitations: Net Motion Is Not Observable From IMU Alone}
+
+The analysis above assumes a static net frame during a single scan. In practice, the IMU (and DVL) 
+measure the motion of the \emph{AUV}, not the motion of the net. The relative drift between cage 
+and vehicle is therefore not observable from inertial sensors alone, and the method cannot separate 
+AUV motion from net motion.
+
+To ensure full coverage despite this limitation, the method relies on two assumptions:
+\begin{enumerate}
+    \item The net motion relative to the water is \emph{slow-varying} during a single vertical scan.
+    \item The horizontal step size between scan lines is chosen conservatively with intentional 
+          \emph{overlap}, so that small unmeasured net drift does not leave gaps in the inspection.
+\end{enumerate}
+
+Under these assumptions, controlling $v_b \approx 0$ and $w_b \approx w_d$ yields an approximately 
+straight scan line in the net frame, and residual drift between scan lines is compensated by overlap.
+
+\section{Role of Perception in Net-Relative Alignment}
+
+Net-relative operation depends on the perception module, which estimates:
+\begin{itemize}[noitemsep]
+    \item the net normal $\mathbf{n}_\text{net}$,
+    \item characteristic features such as the top and bottom of the net or strong corner points.
+\end{itemize}
+
+These are used to:
+\begin{itemize}[noitemsep]
+    \item align the AUV with the net so that the body $x$-axis follows $\mathbf{n}_\text{net}$,
+    \item correct the net-relative position at top and bottom, and when closing the loop.
+\end{itemize}
+
+\section{Global Position Is Not Required}
+
+The mission is defined purely in terms of net-relative coordinates. The scanning pattern is the 
+repeated sequence
+\[
+\text{down} \rightarrow \text{across} \rightarrow \text{up} \rightarrow \text{across},
+\]
+and the mission ends when the vehicle detects that it has returned to its starting location on the net 
+(e.g.\ same angular position or same top corner). Global drift in NED is neither measured nor required 
+to be compensated; slow, bounded net motion and net-relative sensing are sufficient for inspection.
+
+\subsection{Net-Relative Control During Horizontal (Across) Motion}
+
+During across-segments (Modes~2 and~3), the AUV moves horizontally along the net surface to reach 
+the next vertical scan line. Unlike the vertical segments, where the body-frame sway velocity is 
+forced to zero, the across-direction requires the vehicle to generate a controlled, constant 
+horizontal velocity while holding depth. The same logic applies to both planar and circular nets.
+
+\paragraph{Planar Nets.}
+For planar nets, the across-direction is the $y_{\text{net}}$–axis. The mode controller chooses a 
+desired horizontal reference velocity:
+\[
+v_{\mathrm{ref}} = 
+\max\!\left(v_{\min},\; \alpha v_d\right),
+\qquad
+\alpha = 
+\min\!\left(1,\; 
+\frac{|y_d + SW - y_{\text{net}}|}{d_{\text{corner}}}
+\right),
+\]
+where $SW$ is the horizontal step width between vertical scan lines. The saturation through 
+$\alpha$ ensures smooth slowdown when approaching the next corner.
+
+Horizontal motion is enforced through a velocity-tracking controller:
+\[
+\tau_2 = 
+- K_{p,v}(v - v_{\mathrm{ref}})
+- K_{d,v}\dot{v},
+\]
+where $v$ is the sway velocity in the NED/net frame.  
+Depth is held using a PID controller in the vertical direction:
+\[
+\tau_3 = 
+- K_{p,z}(z_{\text{net}} - z_d)
+- K_{d,z}w
+- K_{i,z} \!\int (z_{\text{net}} - z_d)\,dt,
+\]
+with $z_d = z_{\text{bot}}$ in Mode~2 and $z_d = z_{\text{top}}$ in Mode~3.
+
+\paragraph{Circular Nets.}
+For circular nets, the across-direction becomes the angular coordinate $\varphi$. The same control 
+principle applies, but with the reference expressed in angular space:
+\[
+\varphi_d \leftarrow \varphi_d + \Delta\varphi.
+\]
+
+The corresponding tangential velocity is
+\[
+v_{t,\mathrm{ref}} = R\,\dot{\varphi}_{\mathrm{ref}},
+\]
+where $R$ is the local net radius.  
+The angular error is
+\[
+e_\varphi = \text{wrap}(\varphi - \varphi_d),
+\]
+and is regulated by a PI/PD controller:
+\[
+\dot{\varphi}_{\mathrm{cmd}} 
+= -K_{p,\varphi}e_\varphi - K_{d,\varphi}\dot{e}_\varphi.
+\]
+
+This angular rate is mapped into Cartesian sway/heave components via the tangent vector
+\[
+\mathbf{t}(\varphi) =
+\begin{bmatrix}
+-\sin \varphi \\[4pt]
+\cos \varphi
+\end{bmatrix},
+\]
+so the desired horizontal motion becomes
+\[
+\mathbf{v}_{t,d} = 
+v_{t,\mathrm{ref}}\,\mathbf{t}(\varphi).
+\]
+
+Vertical motion is again held with a PID controller identical to the planar case.
+
+\paragraph{Mode Transition.}
+Across-motion ends when the commanded horizontal displacement is achieved:
+\[
+|y_{\text{net}} - (y_d + SW)| < \epsilon_y
+\qquad \text{(planar net)},
+\]
+or
+\[
+|\text{wrap}(\varphi - \varphi_d)| < \epsilon_\varphi
+\qquad \text{(circular net)}.
+\]
+
+The controller then resets any accumulated integral error in the held axis and switches back to a 
+vertical mode (Mode~0 or Mode~1). This ensures that integral contributions from the across-segment 
+do not pollute the vertical scan behavior.
+
+\paragraph{Summary.}
+Across-direction control combines:
+\begin{itemize}[noitemsep]
+    \item constant horizontal velocity tracking,
+    \item slow corner-approach damping,
+    \item depth-holding PID control,
+    \item and a clean handoff to the next vertical segment.
+\end{itemize}
+This structure ensures that the scanning pattern progresses smoothly and that each vertical scan 
+starts at the correct lateral offset—even when subject to slow, unobservable net motion—because 
+horizontal stepping is re-synchronized at each mode transition.
+
+\subsection{Net-Relative Across-Direction Control Using Instantaneous Net Normal}
+
+When moving horizontally along the net (Modes~2 and~3), the controller does not rely on a global
+$y$-axis or on a fixed geometric tangent direction. Instead, the AUV moves \emph{relative to the 
+current shape of the net}. At every control cycle, the perception system provides an estimate of the 
+outward net normal vector
+\[
+\mathbf{n}_{\text{net}}(t),
+\]
+which may vary slowly due to net deformation or cage motion.
+
+\paragraph{Constructing the Tangent Direction.}
+Given the normal vector $\mathbf{n}_{\text{net}}$, the tangent direction of allowed motion along 
+the net is obtained by projecting the desired global horizontal direction onto the net surface. 
+A unique tangent can be constructed using the cross product with the net’s vertical axis:
+\[
+\mathbf{t}_{\text{net}} 
+= \frac{\mathbf{e}_{z} \times \mathbf{n}_{\text{net}}}
+       {\|\mathbf{e}_{z} \times \mathbf{n}_{\text{net}}\|},
+\]
+where $\mathbf{e}_{z}$ is the downward vertical axis of the net frame.  
+This produces a unit vector lying in the net surface and perpendicular to the net normal.
+
+\paragraph{Feed-Forward Tangential Motion.}
+Instead of regulating position along the across-direction, horizontal motion is generated purely by 
+\emph{feedforward thrust} along the instantaneous tangent:
+\[
+\mathbf{v}_{\parallel,d}
+= v_{t,d}\, \mathbf{t}_{\text{net}},
+\]
+where $v_{t,d}$ is the nominal horizontal scanning speed.  
+In practice, the horizontal command is implemented by applying a constant desired sway/heave 
+velocity (or thrust) in the direction of $\mathbf{t}_{\text{net}}$.
+
+Thus, the AUV’s across-motion follows the \emph{local geometry} of the net surface.
+If the net bulges or deforms slightly, the horizontal motion bends correspondingly, ensuring that 
+coverage remains net-relative instead of world-relative.
+
+\paragraph{Depth Holding During Across Motion.}
+While moving along $\mathbf{t}_{\text{net}}$, the depth $z_{\text{net}}$ is held constant by a PID
+controller:
+\[
+\tau_3 = 
+- K_{p,z}(z_{\text{net}} - z_d)
+- K_{d,z}\dot{z}_{\text{net}}
+- K_{i,z} \!\int (z_{\text{net}} - z_d)\,dt,
+\]
+with $z_d = z_{\text{top}}$ in Mode~3 and $z_d = z_{\text{bot}}$ in Mode~2.
+
+\paragraph{Alignment With the Net Normal.}
+To ensure the tangential direction is meaningful, the AUV continuously aligns its body $x$-axis to 
+the net normal:
+\[
+\mathbf{e}_{x_b} \parallel \mathbf{n}_{\text{net}}.
+\]
+This is achieved by a yaw controller that regulates the heading so the camera always faces the net.
+As long as the alignment error remains small, the tangent $\mathbf{t}_{\text{net}}$ directly maps 
+into body-frame sway/heave commands.
+
+\paragraph{Mode Completion.}
+Across-motion ends when the vehicle has moved one predefined step width along the net.  
+Since net motion is not directly observable from IMU or DVL, the controller does not rely on 
+global coordinates but instead uses:
+\begin{itemize}[noitemsep]
+    \item detection of the next scanline boundary (planar net), or
+    \item monitoring angular progress $\varphi$ (circular net), or
+    \item detection of a landmark in the perception system.
+\end{itemize}
+Once the step is complete, the mode controller transitions to the next vertical mode and resets 
+the depth integrator.
+
+\paragraph{Summary.}
+Across-direction control is fully net-relative:
+\begin{itemize}[noitemsep]
+    \item the tangent direction is recomputed at every cycle from the measured net normal,
+    \item the AUV aligns its body to the net and applies a constant feedforward thrust along the tangent,
+    \item depth is held by PID control,
+    \item mode transitions are based on net-relative measurements, not global motion.
+\end{itemize}
+This guarantees that the horizontal motion traces the \emph{actual} net surface, even when the cage 
+moves or deforms slowly.
+
+\subsection{IMU Accuracy and the Feasibility of Net-Relative Across Motion}
+
+A key motivation for executing horizontal (across) motion relative to the \emph{local net geometry}
+rather than a global reference frame is the difference in accuracy between short-term inertial
+measurements and long-term absolute position estimation. An IMU provides high-bandwidth measurements
+of angular rates and accelerations, which integrate to velocity with relatively low short-term
+drift. Over time scales of a few seconds, and over spatial scales of only a few meters, the 
+resulting velocity and displacement estimates are significantly more accurate than global position 
+estimates derived from dead reckoning.
+
+In the across-direction, each horizontal step typically spans only 
+$\mathcal{O}(2$--$4\,\mathrm{m})$. Over such distances, the IMU can measure changes in body-frame
+velocity and orientation with high fidelity:
+\begin{itemize}[noitemsep]
+    \item short-term integration drift is very small,
+    \item the relative change in heading is accurately observable,
+    \item the body-frame sway and heave velocities are measured directly or aided by DVL.
+\end{itemize}
+
+Thus, even though the IMU cannot provide an accurate \emph{global} position, it can reliably
+indicate that the vehicle has moved a few meters along a commanded direction. This is precisely the 
+scale of the across-step between vertical scan lines.
+
+Because the tangent direction $\mathbf{t}_{\text{net}}$ is recomputed at every control cycle from the 
+instantaneous net normal, the vehicle does not depend on knowledge of its global pose. The controller
+simply applies:
+\[
+\mathbf{v}_{\parallel,d} = v_{t,d}\,\mathbf{t}_{\text{net}},
+\]
+and the IMU/DVL measurements confirm that the vehicle has progressed the required short distance. 
+Any residual drift due to slow net motion is corrected when switching back into a vertical mode, and
+the deliberate overlap between scan lines ensures that coverage gaps do not occur.
+
+In summary, the across-direction control strategy leverages the fact that:
+\begin{enumerate}
+    \item IMU-based velocity integration is reliable over short time horizons,
+    \item across-steps are intentionally kept short (a few meters),
+    \item net-relative alignment eliminates the need for absolute global position, and
+    \item overlap in the scanning pattern compensates for small unobservable net motion.
+\end{enumerate}
+
+This makes net-relative across motion both feasible and robust, even in the absence of accurate
+global navigation.
+
+\subsection{Using Global IMU-Based Position Estimates in a Relative Manner}
+
+Although the inspection mission is formulated in the net frame and does not rely on global
+navigation, the AUV still uses the pose estimate provided by the IMU (and DVL) to infer how far it 
+has moved between control updates. Importantly, this information is used in a \emph{relative}, 
+short-term sense rather than as an absolute global position.
+
+The IMU provides accurate, high-rate estimates of velocity and orientation, and when aided by the 
+DVL, it also yields drift-limited estimates of position over short time horizons. While global 
+position from dead reckoning accumulates error rapidly over long distances, the short horizontal 
+across-steps in the coverage pattern are only on the order of
+\[
+2\text{--}4~\mathrm{m},
+\]
+which the IMU/DVL system can measure reliably.
+
+Thus, the vehicle uses its global estimated position increment
+\[
+\Delta \mathbf{p} = \mathbf{p}(t) - \mathbf{p}(t_0)
+\]
+only to determine whether it has moved the required \emph{relative} distance along the commanded
+tangent direction $\mathbf{t}_{\text{net}}$. No absolute global accuracy is required.
+
+This relative use of the global estimate has several advantages:
+\begin{itemize}[noitemsep]
+    \item Short-term IMU–DVL integration drift is very small over a few meters.
+    \item The commanded across-motion is executed according to the \emph{local} net geometry.
+    \item The AUV is not required to know whether the cage itself is drifting.
+    \item Any residual horizontal drift is compensated through intentional overlap between scan lines.
+\end{itemize}
+
+Formally, the vehicle checks progress using the projection:
+\[
+s(t) = \mathbf{t}_{\text{net}}^T \Delta\mathbf{p},
+\]
+and the across-step is complete when $s(t)$ reaches a prescribed length
+$SW$ (planar net) or an angular increment $\Delta\varphi$ (circular net). This means that even though
+the measurement $\mathbf{p}(t)$ is in a global frame, it is used only to evaluate \emph{relative 
+motion along the net}, making the method insensitive to global drift.
+
+In this way, the IMU/DVL-based global estimate acts as a reliable short-term odometer rather than an 
+absolute navigator, aligning naturally with the net-relative nature of the scanning task.
+
+\subsection{Detecting Completion of the Across Motion}
+
+During horizontal (across) motion, the vehicle must determine when it has moved the required
+distance to begin the next vertical scan. Because the absolute global position is not required for
+the mission, the AUV uses only the \emph{relative} change in its estimated global position to detect
+across-progress.
+
+Let $\mathbf{p}(t)$ be the global position estimate (IMU/DVL-aided), and let $t_0$ denote the time
+when the across-segment begins. The relative displacement is
+\[
+\Delta\mathbf{p}(t) = \mathbf{p}(t) - \mathbf{p}(t_0).
+\]
+
+The tangent direction of the net at the current position, obtained from the estimated net normal
+$\mathbf{n}_{\text{net}}$, is
+\[
+\mathbf{t}_{\text{net}}
+= 
+\frac{\mathbf{e}_{z} \times \mathbf{n}_{\text{net}}}
+{\|\mathbf{e}_{z} \times \mathbf{n}_{\text{net}}\|},
+\]
+which lies in the net surface and represents the “across’’ direction.
+
+The component of the displacement along the net is then
+\[
+s(t) = \mathbf{t}_{\text{net}}^{T}\,\Delta\mathbf{p}(t),
+\]
+which represents how far the AUV has moved \emph{along the net}, regardless of any drift normal to
+the net.
+
+\paragraph{Planar nets.}
+For a planar net, each across-step has a fixed linear width $SW$. The across motion is complete when
+\[
+s(t) \geq SW.
+\]
+
+\paragraph{Circular nets.}
+For circular cages, the across motion is defined by a target angular increment $\Delta\varphi$.
+Using the cage radius $R$, the linear step length is
+\[
+SW = R\,\Delta\varphi,
+\]
+and the same condition $s(t) \geq SW$ is used to detect completion.
+
+\paragraph{Robustness.}
+This method has several advantages:
+\begin{itemize}[noitemsep]
+    \item it uses only short-term IMU/DVL motion, which is accurate over 2–4 m,
+    \item it does not require absolute global position,
+    \item it is naturally aligned with the local net geometry,
+    \item it isolates the horizontal progress even if the net or cage drifts.
+\end{itemize}
+
+Thus, the vehicle reliably detects the completion of each across-segment using purely relative
+motion projected onto the net tangent direction.

@@ -1,0 +1,211 @@
+\chapter{Mode Based Cylindrical Sweep Inspection Controller}
+
+This chapter presents the augmentation from planar nets aligned with NED, to inspection of a deformed cylindrical fish-net. The vehicle follows a lawnmower pattern defined on the net surface while maintaining a constant clearance from the net and aligning its attitude with the net normal. inspired by \cite{Amundsen2021AutonomousROV}\cite{Amundsen2024AquacultureRobotics} \cite{Cardaillac2022IAS}
+
+\section{State Inputs and Geometry Quantities}
+
+At each control step, the controller receives:
+\begin{itemize}
+    \item Vehicle pose:
+    \[
+        \eta = 
+        \begin{bmatrix}
+            x & y & z & \phi & \theta & \psi
+        \end{bmatrix}^\top ,
+    \]
+    \item Body–fixed velocities:
+    \[
+        \nu =
+        \begin{bmatrix}
+            u & v & w & p & q & r
+        \end{bmatrix}^\top ,
+    \]
+    \item Cylinder geometry information at the vehicle position:
+    \begin{itemize}
+        \item $\theta_{\mathrm{rel}}$: angle around the cylinder, where it is assumed the estimation is able to estimate net deformation and movement.
+        \item $n_{\mathrm{net}} \in \mathbb{R}^3$: \emph{inward} surface normal of the net.
+        \item $s_{\mathrm{clear}}$: clearance to the net along the inward normal:
+    \end{itemize}
+\end{itemize}
+
+The pattern–following logic maintains:
+\begin{itemize}
+    \item the current stripe angle $\theta_k$,  
+    \item the next stripe angle $\theta_{k+1} = \theta_k + \Delta\theta$,
+\end{itemize}
+with $\Delta\theta$ defined by the field of view of the camera.
+
+\section{Control Output}
+
+The controller computes the generalized force vector
+\[
+    \tau = 
+    \begin{bmatrix}
+        \tau_1 & \tau_2 & \tau_3 & \tau_4 & \tau_5 & \tau_6
+    \end{bmatrix}^\top ,
+\]
+corresponding to body–fixed surge, sway, heave, roll, pitch, and yaw.
+All controllers are a form of P, and PID controllers.
+
+\section{Surge Control: Controlling distance to the Net}
+
+The vehicle must remain keep a set distance to the net to allow the camera to see the net, and avoid collsions with the net, this distance is $x_d$. The inward clearance error is
+\[
+    e_s = \text{distNet} - x_d .
+\]
+
+A PID regulator is applied in the surge direction:
+\begin{align}
+    \tau_1
+    &= -K_{p1} e_s - K_{d1} u - K_{i1} \int e_s \, dt .
+\end{align}
+
+Since the vehicle's body $x$–axis, this control law ensures that
+\[
+    \text{distNet} \to x_d \qquad .
+\]
+
+\section{Planar Sway and Heave Control}
+
+The planar motion controllers regulate the vehicle either:
+\begin{enumerate}
+    \item vertically along a stripe ($\theta \approx \theta_k$), or
+    \item horizontally along the top or bottom edge 
+          ($\theta \to \theta_{k+1}$).
+\end{enumerate}
+
+\subsection{Stripe Tracking (Vertical Legs)}
+
+When moving vertically, angle around the net is performed using:
+\[
+    e_\theta = \operatorname{ssa}\!\left(\theta_{\mathrm{rel}} - \theta_k\right),
+\]
+with sway control
+\[
+    \tau_2 = 
+        -K_{p\theta} e_\theta 
+        - K_{d\theta} v
+        - K_{i\theta} \int e_\theta \, dt .
+\]
+
+Vertical speed is controlled by a PD law with a depth–dependent reference
+\[
+    w_{\mathrm{ref}} = 
+    \begin{cases}
+        \;\;\; w_d \, \alpha(z), & \text{descending},\\[2mm]
+        - w_d \, \alpha(z), & \text{ascending},
+    \end{cases}
+\]
+where $\alpha(z) \in [0,1]$ is a slowdown factor near the top/bottom.
+
+Heave control:
+\[
+    \tau_3 = -K_{p3}(w - w_{\mathrm{ref}}).
+\]
+
+\subsection{Horizontal Motion (Bottom/Top Legs)}
+
+When sweeping horizontally between adjacent stripes,
+the angle error to the next stripe is
+\[
+    e_{\theta,\mathrm{next}} =
+    \operatorname{wrap}\!\left(\theta_{\mathrm{rel}} - \theta_{k+1}\right).
+\]
+
+Sway control drives the vehicle toward $\theta_{k+1}$:
+\[
+    \tau_2 = - K_{d\theta} (v_d -v).
+\]
+
+Depth regulation keeps the vehicle at the top or bottom boundary:
+\[
+    \tau_3 = 
+        -K_{p3z}(z - z_d)
+        -K_{d3} w
+        -K_{i3} \int (z - z_d)\, dt .
+\]
+
+When the condition
+\[
+    |e_{\theta,\mathrm{next}}| < \varepsilon_\theta
+\]
+is met, the controller advances the pattern:
+\[
+    \theta_k \leftarrow \theta_{k+1}, \qquad
+    \theta_{k+1} \leftarrow \theta_k + \Delta\theta .
+\]
+
+\section{Attitude Control and Net Alignment}\label{sec:attitude}
+
+The inward surface normal is denoted $n_{\mathrm{net}} = [n_x, n_y, n_z]^\top$.
+We align the body $x$–axis with this normal using pitch and yaw commands.
+
+A 3–2–1 (yaw–pitch–roll) orientation gives the forward axis:
+\[
+    a_x =
+    \begin{bmatrix}
+        \cos\theta \cos\psi \\[2mm]
+        \cos\theta \sin\psi \\[2mm]
+        -\sin\theta
+    \end{bmatrix}.
+\]
+
+We desire:
+\[
+    a_x^{\,d} = n_{\mathrm{net}} .
+\]
+
+From the forward–axis equations, the desired pitch and yaw satisfy:
+\begin{align}
+\theta_d &= \operatorname{atan2}\!\left(-n_z,\, \sqrt{n_x^2 + n_y^2}\right), &
+\psi_d &= \operatorname{atan2}(n_y, n_x).
+\end{align}
+
+Yaw and pitch errors:
+\[
+    e_\theta^{\mathrm{att}} = \theta - \theta_d, \qquad
+    e_\psi^{\mathrm{att}}   = \psi - \psi_d.
+\]
+
+Pitch control:
+\[
+    \tau_5 =
+        -K_{p5} e_\theta^{\mathrm{att}}
+        -K_{d5} q
+        -K_{i5} \int e_\theta^{\mathrm{att}} dt .
+\]
+
+Yaw control:
+\[
+    \tau_6 =
+        -K_{p6} e_\psi^{\mathrm{att}}
+        -K_{d6} r
+        -K_{i6} \int e_\psi^{\mathrm{att}} dt .
+\]
+
+Roll stabilization maintains $\phi \approx 0$:
+\[
+    \tau_4 = -K_{p4} \phi - K_{d4} p.
+\]
+
+\section{Summary of Full Control Law}
+
+The total generalized force vector is
+\[
+    \tau =
+    \begin{bmatrix}
+        \tau_1 \\ \tau_2 \\ \tau_3 \\ \tau_4 \\ \tau_5 \\ \tau_6
+    \end{bmatrix}.
+\]
+
+Each element comes from physically–motivated control objectives:
+\begin{itemize}
+    \item $\tau_1$: regulate inward clearance from the net,
+    \item $\tau_2$: keep constant angle in net, and control speed during horizontal movement  to next stripe.
+    \item $\tau_3$: keep constant heave during horizontal movement, and control speed during vertical movement.
+    \item $\tau_4$: roll stabilization.
+    \item $\tau_5$: pitch alignment with net normal.
+    \item $\tau_6$: yaw alignment with net normal.
+\end{itemize}
+
+This produces a control law able to follow the net and its deformations.

@@ -1,0 +1,60 @@
+\chapter{Litterature review}
+% \section{Background: Autonomous Net Inspection}
+
+% Aquaculture net pens form a challenging environment for autonomous inspection. Flexible nets deform under current loads and biofouling, creating time-varying geometries that vehicles must safely navigate \cite{loland1991currentforces,lopez2015volumeloss}. Turbid water and low-light conditions limit visual sensing \cite{betancourt2020integrated}, while fish-welfare considerations restrict speed, thruster usage, and proximity to stock \cite{evjemo2024biologytech}. GPS-denied operation requires reliance on DVL, depth, attitude, and model-based navigation \cite{Amundsen2021AutonomousROV,fossen2021handbook}. Disturbances from currents and waves further impose manoeuvring limits during inspection \cite{Cardaillac2022IAS,Nguyen2024ROVControl}.
+
+% Practical aquaculture systems therefore favour simple, robust motion patterns. Surveys show that deployed AUVs generally prioritize predictable coverage paths over computationally intensive optimisation \cite{galceran2013survey}. Representative examples include the Kalypso AUV designed specifically for cage inspection \cite{manos2024kalypso}, hybrid ROV–AUV platforms used in industrial farms \cite{papadiamantis2025hybrid}, and digital-twin validation frameworks that rely on structured trajectories \cite{scaradozzi2024digitaltwin}. These systems demonstrate a clear emphasis on repeatability, low computational load, and compatibility with limited sensor suites.
+
+% \section{General Underwater Inspection Methods}
+
+% \subsection{Coverage Path Planning Approaches}
+
+% Coverage path planning typically adopts geometric patterns that guarantee completeness under uncertain localisation. Classical patterns such as boustrophedon coverage for planar surfaces \cite{choset1998coverage} and circular or cylindrical sweeps for volumetric structures \cite{lin2020planning} remain dominant. More advanced CPP approaches include bio-inspired neural networks \cite{sun2019gbnn} and field-theory-guided A* variants \cite{xu2024ftastar}, but these approaches assume sensing and computation capabilities rarely available on compact aquaculture robots.
+
+% \subsection{Guidance Laws for Underwater Vehicles}
+
+% Most fielded underwater robots use classical geometric guidance laws due to their robustness and low computational demand. Line-of-sight (LOS), pure pursuit, and constant bearing represent the foundational methods \cite{lekkas2009guidance,pettersen2018guidance}. Integral LOS improves disturbance rejection in currents \cite{caharija2016integral}, while pure pursuit provides a simple virtual-target formulation for path following \cite{coulter1992implementation,naeem2003pure}. When systems combine multiple inspection behaviours, the resulting hybrid architecture is naturally described using switching-system theory \cite{liberzon2003switching}.
+
+% \section{Methods Specific to Aquaculture Net Inspection}
+
+% \subsection{Pattern-Based Approaches for Net Cages}
+
+% Aquaculture-specific inspection strategies commonly use cage-relative geometric patterns. DVL-based LOS guidance enables stable following of net surfaces \cite{Amundsen2021AutonomousROV}, while AUVs such as Kalypso employ cylindrical or helical paths tuned for cage geometry \cite{manos2024kalypso}. These patterns remain reliable under drift and deformation. Digital-twin studies validate such trajectories in simulation \cite{scaradozzi2024digitaltwin}. In exposed sites, disturbance-aware controllers ensure feasible manoeuvring around the cage \cite{Nguyen2024ROVControl}.
+
+% \subsection{Perception-Centric Systems}
+
+% Recent work emphasises perception for defect detection while using simple motion patterns. Vision-based systems integrate deep-learning hole detectors with predefined trajectories \cite{akram2023evaluating,lopezbarajas2023visualinspection,lopezbarajas2024inspection}. Sonar-driven methods similarly adopt straightforward inspection arcs aligned with sensor field of view \cite{rosa2024forwardlooking}. These approaches demonstrate the dominance of perception-centric pipelines paired with lightweight coverage strategies.
+
+% \section{Summary and Research Gap}
+
+% The literature consistently shows that simple geometric patterns combined with LOS or pure-pursuit guidance provide the most reliable performance for aquaculture inspection \cite{Amundsen2021AutonomousROV,manos2024kalypso}. Advanced adaptive methods exist but require dense sensing or computation unsuitable for compact, low-cost platforms \cite{xu2024ftastar}. Few works develop lightweight, geometry-based trajectories specifically tuned for cylindrical cages without relying on environmental reconstruction. This thesis addresses that gap by introducing analytically defined patterns with mode switching and an integral pure-pursuit variant that operates using only standard AUV sensors.
+\section{Background: Autonomous Net Inspection}
+Autonomous inspection of aquaculture net pens is shaped by flexible net structures that deform under currents and biofouling, producing continuously varying geometries \cite{loland1991currentforces,lopez2015volumeloss}. Turbid water and low-light conditions challenge camera-based sensing \cite{betancourt2020integrated}, while fish-welfare constraints restrict thruster usage and vehicle proximity to stock \cite{evjemo2024biologytech}. The lack of GPS under water makes navigation more tricky\cite{fossen2021handbook}. According to a recent report by SINTEF, there is a trend of aquaculture farms moving to more exposed areas. This leads to increased demand from autonomous inspection as the sites may be more unsafe for humans. It also increases the difficulty of motion control with increasing disturbances.\cite{SFIExposed2024}
+
+
+%Practical systems need to be reliable and robust to challenging sea states. Generally \cite{galceran2013survey}. The Kalypso AUV exemplifies this trend through cylindrical cage-following patterns implemented via a fixed sequence of waypoints around the net perimeter, tuned for robustness in commercial farms \cite{manos2024kalypso}. Hybrid ROV–AUV systems combine inspection with maintenance tasks while relying on similarly predictable trajectories \cite{papadiamantis2025hybrid}. More advanced approaches, such as real-time flexible-net shape estimation and adaptive path generation from this show a promsisng direction in utilizing local measurements to gain more information\cite{amundsen2025adaptive}. This requires a model of the full pen and may not be suitable for a low cost solution. Am LLM-guided mission adaptation \cite{akram2025aquachat}, demonstrate capabilities beyond current industry norms but remain sensor- and compute-intensive.
+\section{General Underwater Inspection Methods}
+\subsection{Coverage Path Planning Approaches}
+
+Generally, insepction of 3D structures utilize simple geometric paths over computationally expensive optimization mehods. Where the boustrophedon is dominating pattern for AUVs.\cite{galceran2013survey}. While advanced planners such as GBNN coverage generation \cite{sun2019gbnn} or field-theory-guided A* optimisation \cite{xu2024ftastar} offer adaptive capabilities, they depend on dense environment information, making them less suitable for low-cost aquaculture vehicles.
+
+\subsection{Guidance Laws for Underwater Vehicles}
+Most AUVs employ geometric guidance due to its reliability and low computational cost. LOS, pure pursuit, and constant-bearing methods form the classical foundation \cite{lekkas2009guidance,pettersen2018guidance}. Integral and Adaptive LOS extends this approach for improved current rejection \cite{Fossen2023ALOS, Caharija2016ILOS}. Pure pursuit, implemented via a moving virtual target \cite{coulter1992implementation,naeem2003pure}, remains effective for cable-, pipeline-, and structure-following tasks. Cardaillac and Ludvigsen propose a manoeuvring-constrained path follower, allowing heading to be fixed to the structure during inspection \cite{Cardaillac2022IAS}. 
+
+\section{Methods Specific to net Inspection}
+
+% \subsection{Motion-centric research}
+
+% Net-relative geometric patterns dominate aquaculture inspection. Amundsen et al.\ employ DVL to estimate the netplane to aid the LOS-guidance law\cite{Amundsen2021AutonomousROV}. The Kalypso AUV demonstrates a net following pattern based on known geometry of the net \cite{manos2024kalypso}.Amundsen et al.\ provided an estimator for net deformation online to generate updated net-relative paths \cite{amundsen2025adaptive}. Efforts have been made to make the inspetion more efficient by empoying Hierchial task network for deciding when to inspect the net closely and from far away, but the method has yet to be tested in a real world environment \cite{lin2020planning}.
+
+
+% \subsection{Perception-Centric research}
+% A good portion of research toward autonomous net inspection is angled towards perception. Vision-based ROV systems integrate deep-learning hole detectors with predefined trajectories \cite{akram2023evaluating,lopezbarajas2023visualinspection}. Hybrid intervention platforms combine detection with manipulation \cite{lopezbarajas2024inspection}. Forward-looking sonar inspection uses arc-like motions aligned with the sonar field of view \cite{rosa2024forwardlooking}. LLM-mediated frameworks introduce adaptive viewpoint and segment prioritization while still relying on simple primitives \cite{akram2025aquachat}.
+
+Research on autonomous net inspection tends to follow two complementary directions: motion-driven strategies that rely on geometric reasoning about the net, and perception-driven strategies that center sensing and interpretation. Motion-centric work primarily exploits the structure of the cage to guide vehicle behavior. Amundsen et al.\ use DVL measurements to estimate the net plane, enabling LOS guidance relative to the cage geometry \cite{Amundsen2021AutonomousROV}. Similarly, the Kalypso AUV demonstrates net-following behavior based on prior knowledge of the cage layout \cite{manos2024kalypso}. More recently, Amundsen et al.\ introduced an online estimator for net deformation, allowing continuous adaptation of planned trajectories as the structure shifts \cite{amundsen2025adaptive}. Planning efficiency has also been explored through hierarchical task networks that decide when to perform close versus coarse inspection, although this approach has yet to be validated in real-world deployments \cite{lin2020planning}.
+
+Perception-centric research instead focuses on reliable sensing and estimation. Vision-based ROV systems integrate deep-learning hole detectors with predefined or semi-structured trajectories \cite{akram2023evaluating,lopezbarajas2023visualinspection}. Showing promising results for camera based hole detectors. In low-visibility conditions, forward-looking sonar has been used for guiding motion along the net \cite{rosa2024forwardlooking}. A research effort has proposed an LLM-based framework for increasing the autonomy in inspections by easing communication with the operator\cite{akram2025aquachat}.
+
+\section{Summary and Research Gap}
+
+Reliable aquaculture inspection is most commonly achieved through geometric patterns paire \cite{Amundsen2021AutonomousROV,manos2024kalypso}. Advanced adaptive planners and manoeuvring-aware control exist \cite{Cardaillac2022IAS,amundsen2025adaptive}, but their sensing and computational requirements limit deployment. There is a lack of robust inspection methods giving a full coverage guarantee. This project build upon Amundsen work on net plane and pen estimation and proposes a method which executes local net relative motion, combined with mode switching and an integral pure-pursuit variant requiring only standard AUV sensors, and aims to provide full coverage of walls.

@@ -1,0 +1,44 @@
+\subsection{Current Compensation}
+
+Horizontal current will push the vehicle off the planned path, causing a systematic drift in the
+North–East directions. To compensate for this, we estimate the current components
+\[
+\hat{\mathbf{v}}_c^n =
+\begin{bmatrix}
+\hat{v}_{c,N} \\[2pt] \hat{v}_{c,E}
+\end{bmatrix}
+\]
+directly from the drift between the commanded and measured horizontal motion.
+
+\subsubsection*{Kinematic model}
+Let the horizontal position be $\mathbf{p}_{NE}^n=[x\;\;y]^\top$. The horizontal kinematics with current are
+\[
+\dot{\mathbf{p}}_{NE}^n = \mathbf{v}_{d}^n + \mathbf{v}_c^n,
+\]
+where $\mathbf{v}_{d}^n$ is the velocity commanded by the guidance law and $\mathbf{v}_c^n$ is the (unknown) current.
+
+We predict the no-current position using the internal model
+\[
+\dot{\hat{\mathbf{p}}}_{NE}^n = \mathbf{v}_{d}^n + \hat{\mathbf{v}}_c^n,
+\]
+and define the position drift error
+\[
+\tilde{\mathbf{p}}_{NE}^n = \mathbf{p}_{NE}^n - \hat{\mathbf{p}}_{NE}^n.
+\]
+
+\subsubsection*{Current estimator}
+
+Assuming the velocity tracking is good, the drift error is caused by the difference between true and estimated current. We therefore use the simple observer
+\[
+\dot{\hat{\mathbf{v}}}_c^n = K_c \tilde{\mathbf{p}}_{NE}^n,
+\]
+with positive diagonal gains $K_c=\mathrm{diag}(k_{c,N},k_{c,E})$.  
+The estimator converges as long as the current is slowly varying.
+
+\subsubsection*{Compensation in guidance}
+
+Instead of commanding the ground-relative desired velocity $\mathbf{v}_{\text{pp}}^n$ from Pure Pursuit, we subtract the estimated current. Since the AUV operated in NED and current affects north and east, and in the east direction we are controlling the distance to the net directly and can compensate by adding integral effect to the controller. This is only on the east direction:
+\[
+\mathbf{v}_{d}^n = \mathbf{v}_{\text{pp}}^n - \hat{\mathbf{v}}_c^n.
+\]
+This ensures that the resulting ground track follows the path even under steady current.

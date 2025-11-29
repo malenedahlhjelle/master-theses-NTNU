@@ -1,0 +1,145 @@
+\section{Guidance System}
+
+This chapter presents the guidance strategy used to follow the inspection path along the
+net surface. The key idea is that the vehicle moves with a fixed, user-defined desired speed
+$U_{\text{des}}$ along the net. The path is defined in a local 2D path frame, and its tangent
+vector is rotated into the net plane for execution. The local surface normal is used both for
+orientation and for regulating the standoff distance. In this way, the system avoids steering
+based directly on global positions, which may be inaccurate near the net.
+
+\subsection{Coordinate Frames}
+
+The vehicle uses the standard NED frame:
+\[
+x \text{ (north)}, \qquad y \text{ (east)}, \qquad z \text{ (down)}.
+\]
+
+The inspection path is defined in a 2D path frame $\{P\}$:
+\[
+p_P(s) =
+\begin{bmatrix}
+y_P(s) \\
+z_P(s)
+\end{bmatrix},
+\qquad s \in [0,1].
+\]
+
+The perception system provides a local surface normal computed from a point cloud obtained by onboard single beam sonar and camera.
+\[
+n_f \in \mathbb{R}^3,
+\]
+pointing outward from the net.
+
+From the surface normal, the local net-aligned frame is constructed:
+\[
+t_f = \frac{n_f \times z_n}{\|n_f \times z_n\|}, 
+\qquad
+b_f = n_f \times t_f, 
+\qquad
+z_n = [0,0,1]^T.
+\]
+
+Here $t_f$ is the horizontal tangent direction along the net, $b_f$ is the vertical direction
+within the net plane, and $n_f$ is the normal.
+
+\subsection{Path Progression Using Waypoints}
+
+The path is provided as a sequence of waypoints
+\[
+W_0, W_1, \dots, W_N,
+\]
+which are used only to update the path parameter and determine progression along the
+path. 
+
+A waypoint $W_i$ is considered passed when
+\[
+s_i = (p - W_i) \cdot t_{\text{path}} > 0,
+\]
+where $t_{\text{path}}$ is the nominal path direction. This allows robust progression even with
+uncertain global position estimates.
+
+\subsection{Path Tangent Rotated Into the Net Plane}
+
+The path tangent in the 2D path frame is
+\[
+\tau_P(s) = \frac{d p_P}{d s},
+\qquad
+\hat{\tau}_P(s) = 
+\frac{\tau_P(s)}{\|\tau_P(s)\|} =
+\begin{bmatrix}
+\tau_y(s) \\
+\tau_z(s)
+\end{bmatrix}.
+\]
+
+To obtain the corresponding tangent direction on the net surface in 3D, the path tangent is
+rotated into the net plane using the basis vectors $(t_f, b_f)$:
+
+\[
+\tau_n(s) = \tau_y(s)\, t_f + \tau_z(s)\, b_f.
+\]
+
+This vector lies in the net plane and specifies the correct direction of motion for the vehicle.
+
+\subsection{Tangential Motion With Desired Speed}
+
+The vehicle should move along the path with the user-defined desired speed $U_{\text{des}}$.
+The desired tangential velocity in the NED frame becomes
+
+\[
+v_{\text{path},d}^n = U_{\text{des}}\, \tau_n(s).
+\]
+
+This provides the correct combination of horizontal and vertical motion along the net.
+
+\subsection{Orientation Control Using the Surface Normal}
+
+The vehicle’s camera must always face the net. The desired yaw and pitch follow directly
+from the surface normal:
+
+\[
+\psi_d = \text{atan2}(n_{f,y},\, n_{f,x}),
+\qquad
+\theta_d = -\arcsin(n_{f,z}).
+\]
+
+\subsection{Distance Control Through the Surface Normal}
+
+Tangential motion does not guarantee that the correct distance to the net is maintained.
+Therefore, the original surge controller is retained:
+
+\[
+e_x = x - x_d,
+\qquad
+u_d = -K_{p1} e_x - K_{d1} u.
+\]
+
+Since the surface normal $n_f$ points outward from the net, the resulting normal-direction
+velocity is
+\[
+v_{n,d}^n = u_d\, n_f.
+\]
+
+This pushes the vehicle slightly toward or away from the net depending on the distance error.
+
+\subsection{Combined Desired Velocity}
+
+The complete desired velocity in the NED frame is
+
+\[
+v_d^n
+= v_{\text{path},d}^n + v_{n,d}^n
+= U_{\text{des}}\, \tau_n(s) + u_d\, n_f.
+\]
+
+This expression combines path-following motion in the tangent plane with distance control
+along the normal. The resulting velocity vector is transformed into the body frame and
+tracked by the 6DOF controller.
+
+\subsection{Summary}
+
+The guidance system follows a 2D inspection path defined in the path frame using a fixed
+user-chosen speed $U_{\text{des}}$. The path tangent is rotated into the net plane before use,
+and the surface normal determines both the orientation and the distance regulation. The
+method does not rely on accurate global position tracking and therefore remains robust in
+the noisy and uncertain environment near the net surface.

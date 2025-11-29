@@ -1,0 +1,135 @@
+\section{Decoupled 6-DOF Vehicle Dynamics}
+
+\subsection{States}
+
+\[
+\eta =
+\begin{bmatrix}
+x \\ y \\ z \\ \phi \\ \theta \\ \psi
+\end{bmatrix},
+\qquad
+\nu =
+\begin{bmatrix}
+u \\ v \\ w \\ p \\ q \\ r
+\end{bmatrix}.
+\]
+
+The absolute velocity is
+\[
+\nu_a = \nu_r + \nu_c,
+\]
+where $\nu_r = \nu$ is the relative velocity and $\nu_c$ is the current velocity expressed in the body frame.
+
+\subsection{Decoupled Rigid-Body Dynamics}
+
+The dynamics are assumed fully decoupled with diagonal mass and damping matrices:
+\[
+M = \mathrm{diag}(m_{11},m_{22},m_{33},m_{44},m_{55},m_{66}), 
+\qquad
+D = \mathrm{diag}(d_{11},d_{22},d_{33},d_{44},d_{55},d_{66}).
+\]
+
+The 6-DOF equations of motion reduce to
+\[
+M\dot{\nu}_r + D\nu_r = \tau,
+\]
+and since $M$ is diagonal,
+\[
+\dot{\nu}_r = M^{-1}(\tau - D\nu_r).
+\]
+
+\subsection{Kinematics}
+
+The kinematic relationship is
+\[
+\dot{\eta} = J(\eta)\, \nu_a.
+\]
+
+\subsubsection{Rotation Matrix}
+
+Using a $3$--$2$--$1$ (yaw--pitch--roll) rotation sequence:
+
+\[
+R(\phi,\theta,\psi) =
+\begin{bmatrix}
+c_\psi c_\theta &
+c_\psi s_\theta s_\phi - s_\psi c_\phi &
+c_\psi s_\theta c_\phi + s_\psi s_\phi \\[4pt]
+s_\psi c_\theta &
+s_\psi s_\theta s_\phi + c_\psi c_\phi &
+s_\psi s_\theta c_\phi - c_\psi s_\phi \\[4pt]
+-s_\theta &
+c_\theta s_\phi &
+c_\theta c_\phi
+\end{bmatrix},
+\]
+where $c_\alpha = \cos\alpha$ and $s_\alpha = \sin\alpha$.
+
+\subsubsection{Euler-Angle Rate Transformation}
+
+\[
+\begin{bmatrix}
+\dot{\phi} \\ \dot{\theta} \\ \dot{\psi}
+\end{bmatrix}
+=
+T(\phi,\theta)
+\begin{bmatrix}
+p \\ q \\ r
+\end{bmatrix},
+\]
+
+\[
+T(\phi,\theta)=
+\begin{bmatrix}
+1 & s_\phi \tan\theta & c_\phi \tan\theta \\
+0 & c_\phi            & -s_\phi \\
+0 & s_\phi / c_\theta & c_\phi / c_\theta
+\end{bmatrix}.
+\]
+
+\subsubsection{Full Jacobian}
+
+\[
+J(\eta) =
+\begin{bmatrix}
+R(\phi,\theta,\psi) & 0_{3\times 3} \\
+0_{3\times 3}       & T(\phi,\theta)
+\end{bmatrix}.
+\]
+
+\subsection{Ocean Current Model}
+
+Given an inertial-frame current vector
+\[
+v_c^n =
+\begin{bmatrix}
+v_{c,x} \\ v_{c,y} \\ v_{c,z}
+\end{bmatrix},
+\]
+
+the body-frame current velocity is
+\[
+v_c^b = R^\top(\phi,\theta,\psi) \, v_c^n.
+\]
+
+We define
+\[
+\nu_c =
+\begin{bmatrix}
+v_c^b \\ 0 \\ 0 \\ 0
+\end{bmatrix}.
+\]
+
+\subsection{Euler Forward Integration}
+
+The relative velocity update is
+\[
+\nu_r(k+1) = \nu_r(k)
++ \Delta t \, M^{-1}\big(\tau(k) - D\nu_r(k)\big),
+\]
+
+and the kinematic update is
+\[
+\eta(k+1) = \eta(k)
++ \Delta t \, J(\eta(k))\left(\nu_r(k) + \nu_c(k)\right).
+\]

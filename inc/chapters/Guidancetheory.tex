@@ -1,0 +1,55 @@
+\section{Line-of-Sight Guidance for Path Following}
+
+Path following for underactuated marine vehicles such as AUVs is commonly achieved with line-of-sight (LOS) guidance laws. These algorithms generate a desired yaw angle $\psi_d$ (and optionally a desired depth $z_d$) such that the vehicle converges to and follows a straight-line path between waypoints. A large body of work has analyzed LOS-based methods, from proportional LOS \cite{fossen2003los}, integral LOS (ILOS) \cite{borhaug2008integral}, adaptive ILOS \cite{fossen2015adaptive}, and more recently, adaptive LOS (ALOS) \cite{fossen2023alos}.
+
+\subsection{LOS Guidance Principle}
+For a straight-line segment defined by two waypoints
+\[
+P_i^n = (x_i^n, y_i^n, z_i^n), \quad P_{i+1}^n = (x_{i+1}^n, y_{i+1}^n, z_{i+1}^n),
+\]
+the horizontal path azimuth is
+\[
+\pi_h = \atan2(y_{i+1}^n - y_i^n,\; x_{i+1}^n - x_i^n).
+\]
+Transforming the vehicle position $(x_n, y_n)$ into the path-tangential frame gives the cross-track error $y_e^p$:
+\[
+\begin{bmatrix} x_e^p \\ y_e^p \end{bmatrix}
+= R_{z,\pi_h}^\top \left( \begin{bmatrix} x_n \\ y_n \end{bmatrix} - \begin{bmatrix} x_i^n \\ y_i^n \end{bmatrix} \right),
+\]
+where $R_{z,\pi_h}$ is a planar rotation.
+
+\subsection{Adaptive LOS Guidance Law}
+The Adaptive Line-of-Sight (ALOS) law \cite{fossen2023alos} improves robustness against ocean currents by introducing an adaptive estimate of the crab angle $\hat{\beta}_c$. The desired yaw angle is computed as
+\begin{equation}
+\psi_d = \pi_h - \hat{\beta}_c - \tan^{-1}\!\left(\frac{y_e^p}{\Delta_h}\right),
+\label{eq:alos}
+\end{equation}
+with the adaptation law
+\begin{equation}
+\dot{\hat{\beta}}_c = \gamma_h \frac{\Delta_h}{\Delta_h^2 + (y_e^p)^2} \, y_e^p,
+\label{eq:alos_update}
+\end{equation}
+where $\Delta_h > 0$ is the lookahead distance and $\gamma_h > 0$ is an adaptation gain.
+
+This law guarantees uniform semiglobal exponential stability (USGES) for straight-line path following at constant speed \cite{fossen2023alos}.
+
+\subsection{Vertical Guidance}
+In this thesis, vertical control is simplified by assigning a desired depth $z_d$ directly:
+\begin{equation}
+z_d = z_i^n + \frac{s}{L}(z_{i+1}^n - z_i^n),
+\end{equation}
+where $s$ is the along-track distance in the path frame and $L$ is the horizontal path length. This avoids introducing an additional vertical LOS angle and crab compensation in heave, while still ensuring smooth depth transitions.
+
+\subsection{Reasoning for Method Selection}
+The ALOS method was chosen because:
+\begin{itemize}
+    \item It explicitly adapts to unknown and slowly varying sideslip/crab angles caused by ocean currents.
+    \item It avoids saturation effects in ILOS, providing better transient performance when disturbances vary.
+    \item It has been validated both theoretically (USGES guarantees) and experimentally on AUVs such as the Remus 100 \cite{fossen2023alos}.
+    \item For the application of aquaculture net inspection, robustness against variable currents is critical, while vertical motion can be handled by a separate depth controller.
+\end{itemize}
+
+Thus, the chosen guidance structure combines ALOS in the horizontal plane with direct depth assignment in the vertical plane, ensuring robustness and practical implementability in 3D missions.
+
+\bibliographystyle{ieeetr}
+\bibliography{references}

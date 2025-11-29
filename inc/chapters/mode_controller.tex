@@ -1,0 +1,151 @@
+\chapter{Mode Controller}
+
+This chapter describes the implementation of the mode based guidance and control, which executes the coverage pattern along the net by switching between a discrete set of motion commands. Unlike the guidance system, which computes geometric references based on path waypoints, the mode controller defines the \emph{operational logic} describing the path. 
+
+The mode controller outputs surge, sway, heave, and yaw force commands directly from a set of PID and P control laws. These control actions ensure that the AUV maintains a constant standoff distance to the net, moves with a predefined scanning velocity, and transitions cleanly at top and bottom corners without accumulating unwanted integral error.
+
+The controller assumes that the vehicle can be modeled as a point mass due to its 8-thruster configuration. For all operational modes, the ROV must maintain its camera pointing toward the net, and the vehicle should remain upright to avoid undesirable shifts in the relationship between the center of mass and center of buoyancy.
+
+\section{Coordinate Frames and Motion Modes}
+
+All states are expressed in the standard \textbf{NED} frame:
+\begin{itemize}[noitemsep]
+    \item $x$ – North (positive toward the net normal)
+    \item $y$ – East (horizontal direction along the net)
+    \item $z$ – Down (vertical direction along the net)
+\end{itemize}
+
+The mode controller operates on four discrete motion modes:
+\begin{enumerate}
+    \item Mode 0: Vertical descent along the net
+    \item Mode 1: Vertical ascent along the net
+    \item Mode 2: Horizontal motion at the bottom edge
+    \item Mode 3: Horizontal motion at the top edge
+\end{enumerate}
+
+Each mode defines which axis is performing tracking, which is holding depth, and which velocities are treated as feedforward references.
+
+\section{Initialization}
+
+On first activation, the controller initializes:
+\begin{itemize}[noitemsep]
+    \item Net boundaries: $z_{\text{top}} = 0$, $z_{\text{bot}} = H$
+    \item Vertical mode: \texttt{mode\_z} = \texttt{0} (descending)
+    \item Horizontal reference: $y_d = 0$
+    \item Standoff distance: $x_d = 2\,\mathrm{m}$
+    \item Nominal actuation velocities: $w_d = 1\,\mathrm{m/s}$ (vertical), $v_d = 1\,\mathrm{m/s}$ (horizontal)
+    \item All integral terms set to zero
+\end{itemize}
+
+\section{Mode Logic}
+
+At each control cycle, the controller selects forces $\tau = [\tau_1,\dots,\tau_6]^T$ corresponding to surge, sway, heave, roll, pitch, and yaw.
+
+\subsection{Vertical Descent (Mode 0)}
+
+The vehicle moves downward with desired velocity $w_d$, while regulating sway position to remain aligned with the column:
+
+\[
+\tau_2 = 
+- K_{p2}(y - y_d) 
+- K_{d2} v 
+- K_{i2} \int (y - y_d)\,dt
+\]
+
+To ensure smooth transitions into the bottom corner, the reference vertical speed is reduced in the last few decimeters:
+
+\[
+w_{\text{ref}} = \max \left( w_{\min},\, \alpha w_d \right),
+\qquad 
+\alpha = \min\left(1,\frac{|z - z_{\text{bot}}|}{d_{\text{corner}}}\right)
+\]
+
+\[
+\tau_3 = -K_{p3}(w - w_{\text{ref}})
+\]
+
+When $|z - z_{\text{bot}}| < 0.2$, the controller switches to Mode~2 (horizontal motion along the bottom).
+
+\subsection{Vertical Ascent (Mode 1)}
+
+Similar logic applies for ascending the net:
+
+\[
+w_{\text{ref}} = -\max \left( w_{\min},\, \alpha w_d \right)
+\]
+
+When $|z - z_{\text{top}}| < 0.2$, the controller switches to Mode~3.
+
+\subsection{Horizontal Motion Along the Bottom (Mode 2)}
+
+The controller tracks a constant sway velocity toward the next vertical scanline:
+
+\[
+v_{\text{ref}} = \max\left(v_{\min},\, \alpha v_d\right),
+\qquad 
+\alpha = \min\left(1, \frac{|(y_d + SW) - y|}{d_{\text{corner}}}\right)
+\]
+
+\[
+\tau_2 = -K_{p2}(v - v_{\text{ref}})
+\]
+
+Depth is held at $z = z_{\text{bot}}$ using a full PID law:
+\[
+\tau_3 = -K_{p3}(z - z_d) - K_{d3}w - K_{i3}\int(z - z_d)\, dt
+\]
+
+When $y = y_d + SW$ (within $0.2\,\mathrm{m}$), the controller switches to Mode~1.
+
+\subsection{Horizontal Motion Along the Top (Mode 3)}
+
+Identical to Mode~2 but maintaining depth at $z_{\text{top}}$ and transitioning into descent at the next vertical boundary.
+
+\section{Surge, Roll, Pitch, and Yaw Control}
+
+\subsection{Surge (Standoff Regulation)}
+The standoff distance to the net is maintained by:
+
+\[
+\tau_1 = 
+- K_{p1}(x - x_d) 
+- K_{d1} u 
+- K_{i1} \int(x - x_d)\,dt
+\]
+
+\subsection{Roll and Pitch}
+
+Since the ROV must remain upright:
+
+\[
+\tau_4 = 0, \qquad \tau_5 = 0
+\]
+
+\subsection{Yaw Control}
+
+Yaw is regulated to maintain the camera normal aligned with the net: 
+
+\[
+\psi_{\text{err}} = \text{ssa}(\psi - \psi_d)
+\]
+
+\[
+\tau_6 = 
+- K_{p6} \psi_{\text{err}}
+- K_{d6} r
+- K_{i6} \int \psi_{\text{err}}\,dt
+\]
+
+\section{Integral Handling and Corner Behavior}
+
+To avoid unbounded integral buildup due to the sharp geometric transitions at corners:
+\begin{itemize}
+    \item Integral terms for $y$ and $z$ are reset at each mode transition.
+    \item Corner slowdown ensures that the PID loops do not experience abrupt sign changes.
+    \item Horizontal and vertical integral actions are never carried across segments.
+\end{itemize}
+
+This ensures stable behavior even when vertical current varies significantly between surface and depth.
+
+
+

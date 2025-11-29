@@ -1,0 +1,135 @@
+
+% Autonomous inspection of aquaculture net pens has received increased interest as technology and Aquaculture has evolved. Fish farming nets are flexible structures essential for containing fish and protecting the surrounding
+% environment. Damage such as small tears or larger holes can lead to fish escapes with significant environmental and economic consequences. Traditional inspection practices rely heavily on divers or manually operated ROVs, procedures that are resource-intensive, weather-dependent, and inherently risky. Autonomous underwater vehicles (AUVs) offer a promising alternative by enabling more
+% regular inspections, consistent coverage, and reduced reliance on human operators. 
+
+% \section{Problem Context: AUV Inspection of Aquaculture Nets}
+% An AUV operating around a fish pen must follow the net surface closely while ensuring that the entire structure is inspected. Unlike rigid underwater infrastructure, fish pens deform continuously under currents, waves, biomass movement, and mooring dynamics. The vehicle therefore cannot rely solely on preplanned trajectories; it must adapt its motion to a geometry that may shift during the
+% mission and operate robustly even when perception measurements momentarily fail or become ambiguous.
+
+% \section{Motivation and Challenges}
+
+% This project thesis is part of the AUV-project at Mohn Technology.  The company aims to provide an autonomous inspection solution at a low cost. This entails producing the AUV with low cost sensors and components only able to withstand pressures down to 50m. In this way the product can be made available to all scales of surface based fish farms.
+
+% The primary challenge in autonomous net inspection lies in guiding the AUV along a surface that is both flexible and only partially observable at any given time. Currents may push the vehicle off the intended trajectory, and limited visibility, occlusions, or temporary loss of localization can make it difficult to estimate relative position to the net. The use of low cost sensors also increase the difficulty of the task. 
+
+% The geometry itself introduces additional complexity: planar sections can be approximated locally, but the overall structure is cylindrical, and the vehicle must transition smoothly between vertical and horizontal motion while maintaining a
+% safe and stable standoff distance. 
+
+% \section{Scope and Assumptions}
+
+% This thesis focuses on the development of path planning and guidance methods for autonomous net inspection in simulation. The project does not account for complex hydrodynamic forces and develops a simple low level control to acuate the AUV along its trajectory.
+% Perception is abstracted to provide discrete cues such as identification of top or bottom boundaries. Environmental disturbances such as
+% currents are included in simplified form, enabling evaluation of drift sensitivity and robustness.
+
+% \section{Problem Definition}
+
+% The problem addressed in this thesis is how an AUV can be guided to achieve complete and robust
+% inspection of aquaculture nets under environmental disturbances, uncertain and deforming net
+% geometry, and temporary loss of localization. More specifically, the work focuses on designing
+% path planning and guidance methods that allow the vehicle to follow a planar net surface in a controlled manner, then one method is extended to a realistic cylindrical net geometry, and maintain safe standoff distance and stable motion while still ensuring that the entire net surface is inspected.
+
+% \section{Contributions}
+
+% The thesis provides two complementary guidance methods for planar nets: a geometric guidance
+% approach based on pure pursuit and a logic-based controller that encodes the motion pattern
+% directly. Building on the insights from these simplified cases, the work introduces an extended
+% hybrid guidance method capable of following a cylindrical net surface and performing a
+% three-dimensional lawnmower-style inspection. The methods are integrated into a simulation
+% framework that supports disturbance modelling, loss-of-localization scenarios, and coverage
+% evaluation, and their performance is assessed through a range of simulated inspection missions.
+
+% \section{Organization of the Report}
+
+% The remainder of this report is structured as follows. Chapter~2 presents background material and
+% related work on path planning, AUV guidance, and aquaculture inspection. Chapter~3 describes the
+% system model, net geometries, assumptions, and operational scenario. Chapters~4 and~5 introduce
+% the guidance methods developed for planar nets, while Chapter~6 presents the extended hybrid
+% guidance method for cylindrical nets. Chapter~7 outlines the simulation framework and test setup,
+% and Chapter~8 evaluates the results. Chapter~9 discusses the findings, and Chapter~10 concludes the
+% thesis and outlines directions for future work.
+\section{Industrial Context}
+
+Aquaculture net pens rely on flexible mesh structures that deform under currents, waves, and
+biomass movement. Damage such as tears or holes can lead to fish escapes with substantial
+environmental and economic consequences. Inspections are traditionally conducted by divers or
+manually operated ROVs, which makes the process labour-intensive, weather-dependent, and costly.
+Autonomous underwater vehicles (AUVs) offer a promising alternative by enabling regular
+inspections, consistent coverage, and reduced operational effort.
+
+This project is carried out as part of the AUV programme at Mohn Technology, which aims to develop
+a low-cost autonomous inspection solution suitable for shallow-water fish farms. The vehicle must
+therefore operate with inexpensive sensors and components and withstand pressures only down to
+approximately 50 meters. These industrial constraints shape the sensing and navigation capabilities
+available to the system.
+
+The AUV operates around a floating fish pen, following the net surface at a controlled stand-off
+distance. The net is a highly flexible structure influenced by currents, wave-induced motion, and
+biomass movement, making its shape time-varying and only partially observable at any given moment.
+To support development and evaluation, two idealised net geometries are considered: a planar surface
+for simplified initial development and a cylindrical surface representing a full pen.
+
+%\section{Technical Challenges, Scope, and Assumptions}
+
+%Autonomous inspection requires the AUV to track a deformable, partially observable surface under disturbances and sensing limitations. Currents may push the vehicle off the desired path, visibility can be reduced, and localization may temporarily degrade. These difficulties are compounded by the use of low-cost sensors, which increase measurement uncertainty. The cylindrical geometry adds further complexity, requiring the vehicle to transition smoothly between vertical and horizontal motion while maintaining alignment with the net surface normal. The scope of the thesis is limited to simulation-based development of path planning and guidance methods. Hydrodynamic effects are simplified, and a basic low-level controller actuates the vehicle along commanded trajectories. Perception is abstracted to discrete cues, such as detecting the net's upper or lower boundary, and environmental disturbances are modelled as moderate, slowly varying currents. The objective is to assess guidance behaviour under controlled and repeatable conditions.
+
+\section{Problem Definition and Contributions of this report}
+The scope of this thesis is limited to simulation-based development of path planning and guidance methods for achieving complete inspection of fish farming nets. Hydrodynamic effects are simplified, and a basic low-level controller is implemented to actuate the vehicle along commanded trajectories. Two guidance methods are developed for planar nets: a geometric approach based on pure pursuit and a logic-based controller that encodes the inspection behaviour directly. The latter is extended to a controller capable of following a cylindrical net and generating a three-dimensional inspection pattern.
+\subsection*{Main Contributions}
+
+The main contributions of this report are:
+\begin{itemize}
+    \item Development of a geometric guidance method for planar net inspection using a pure-pursuit formulation.
+    \item Development of a logic-based controller for planar net inspection based on discrete inspection behaviours.
+    \item Extension of the logic-based controller into a hybrid mode-based method capable of following a cylindrical net surface.
+\end{itemize}
+\section{Organization of the Report}
+
+The report is divided into five main parts, each grouping related chapters and topics:
+
+\begin{itemize}
+
+    \item \textbf{Part I — Foundations}  
+    Provides the conceptual, theoretical, and system-level basis for the work.  
+    This part contains:  
+    \begin{itemize}
+        \item \textbf{Chapter~1}: Introduction  
+        \item \textbf{Chapter~2}: Theory  
+        \item \textbf{Chapter~3}: Literature review and related work  
+        \item \textbf{Chapter~3}: System Description
+    \end{itemize}
+
+    \item \textbf{Part II — Guidance Methods for Planar Nets}  
+    Introduces and develops two alternative guidance methods for the simplified planar-net scenario.  
+    This part contains:  
+    \begin{itemize}
+    
+        \item \textbf{Chapter~4}: Pure Pursuit Guidance Method for Planar Nets  
+        \item \textbf{Chapter~5}: Logic-Based Controller for Planar Nets
+        \item \textbf{Chapter~5}: Simulation setup
+    \end{itemize}
+
+    \item \textbf{Part III — Extended Guidance Method for Cylindrical Nets}  
+    Extends one of the planar-net methods to a realistic cylindrical net structure and describes the simulation tools used for evaluation.  
+    This part contains:  
+    \begin{itemize}
+        \item \textbf{Chapter~6}: Simulation Framework  
+        \item \textbf{Chapter~7}: Mode-Based Hybrid Controller for Cylindrical Nets
+    \end{itemize}
+
+    \item \textbf{Part IV — Results and Discussion}  
+    Presents the testing scenarios, experimental results, and evaluation of all developed methods.  
+    This part contains:  
+    \begin{itemize}
+        \item \textbf{Chapter~8}: Experiments and Results
+    \end{itemize}
+
+    \item \textbf{Part V — Conclusion and Future Work}  
+    Summarizes the findings and outlines directions for further development.  
+    This part contains:  
+    \begin{itemize}
+        \item \textbf{Chapter~9}: Conclusion  
+        \item \textbf{Chapter~10}: Future Work
+    \end{itemize}
+
+\end{itemize}

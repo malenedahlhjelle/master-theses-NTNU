@@ -17,9 +17,34 @@
 \usepackage{graphicx}
 \usepackage{hyperref}   % For cross references in pdf
 
+% ===== Preamble additions (paste in your preamble once) =====
+\usepackage{ltablex}   % multipage table with X columns that stretch to \textwidth
+\usepackage{array}
+\usepackage{hyperref}
+\keepXColumns
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{3pt}
+
+% --- Preamble (once) --- for tankekart
+\usepackage{forest}
+\usepackage{graphicx} % for \scalebox
+\newcommand{\refn}[1]{\textsuperscript{[#1]}}
+
+% --- Preamble (once) --- for pp kapittel
+\usepackage{amsmath, amssymb}    % Math symbols and environments
+\usepackage{siunitx}             % Proper SI units (like \SI{4.0}{m/s})
+\usepackage{geometry}            % (optional) adjust margins
+\usepackage{booktabs}            % better tables
+\usepackage{enumitem}            % better control over itemize/enumerate spacing
+
 % For smart references 
 %    use \cref{label} and Caption and Number will be added automatically
 \usepackage[capitalise,noabbrev]{cleveref} 
+
+\usepackage{longtable,booktabs,array}
+\setlength{\LTpre}{0pt}
+\setlength{\LTpost}{0pt}
+
 
 \usepackage{color}              % For colouring text 
 \hypersetup{colorlinks=true,     
@@ -33,6 +58,7 @@
 \usepackage{booktabs}
 \usepackage{gnuplottex} %miktex option if using miktex on windows
 \usepackage{rotating}
+\usepackage{booktabs,tabularx} % once in your preamble
 
 
 \definecolor{darkgreen}{rgb}{0,0.5,0}
@@ -96,25 +122,58 @@
 \begin{document}
 
 \input{inc/DaimData} % this is the file which contains all the details about your thesis
-\makefrontpages % make the frontpages
-\input{inc/mastersIntro}
+% \makefrontpages % make the frontpages
+% \input{inc/mastersIntro}
 
 \tableofcontents
 
-\hypersetup{pageanchor=true}
+% \hypersetup{pageanchor=true}
 
 % Comment with a percent to remove figures or tables:
-\listoffigures
-\listoftables
-\lstlistoflistings
+% \listoffigures
+% \listoftables
+% \lstlistoflistings
 
 
-\include{inc/introduction} % includes latex files from the same directory
-\include{inc/packages} % could be called Methodology or methods or any filename 
-\include{inc/structure} % could be results
-\include{inc/implementation}
-\include{inc/discussion}
-\include{inc/conclusion}
+% \include{inc/chapters/introduction} % includes latex files from the same directory
+\part{Part I — Project Foundations}
+\chapter{Introduction}
+%  \include{inc/chapters/Ch1}
+\input{inc/chapters/Introduction}
+\input{inc/chapters/Background}
+ \input{inc/chapters/Litteraturereview3}
+ % \input{inc/chapters/Litterature_table}
+ % \input{inc/chapters/tree}
+\chapter{System description and requirements}
+ \input{inc/chapters/System}
+  \input{inc/chapters/Requirements}
+
+ % \input{inc/chapters/Guidancetheory}
+ \part{Part 2: Guidance Methods for Planar Nets}
+ \label{part:planar_guidance}
+\input{inc/chapters/Pathplanning_node}
+\input{inc/chapters/pp_guidance}
+\input{inc/chapters/Autopilot}
+\include{inc/chapters/mode_controller}
+\part{Part 3: Guidance Method for Cylindrical Nets}
+\label{part:cylindrical_guidance}
+\include{inc/chapters/new_mode_controller}
+% \include{newguidance3.tex}
+ \input{inc/chapters/problem_illustartion}
+ \input{inc/chapters/Simulation}
+\part{Part 4: Results and Discussion}
+\label{part:results_discussion}
+\part{Part 5: Conclusion and Future Work}
+\label{part:conclusion_future_work}
+
+
+% \include{inc/chapters/model}
+% \include{inc/packages} % could be called Methodology or methods or any filename 
+% \include{inc/structure} % could be results
+% \include{inc/chapters/implementation}
+ \include{inc/discussion}
+ \include{inc/conclusion}
+\
 
 \ifthenelse{\boolean{HarvardCitations}}{%
 	\bibliographystyle{agsm} % used for Harvard style references. Names - Humanities & Interaction Design

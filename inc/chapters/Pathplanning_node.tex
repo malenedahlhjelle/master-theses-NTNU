@@ -1,0 +1,72 @@
+\chapter{Path Planning}
+
+This chapter describes how the inspection path for the AUV is generated.  
+The goal is to cover the entire fish net using a simple and repeatable motion pattern that guarantees full visual coverage.  The AUV will follow the path in 3D. Due to fish pen nets being a flexible structure. They are affected by currents and waves, so their exact position can not be exactly predicted. What we do know is the lenght and witch of the net. I will utilize this to make a 2D path which guarantees full coverage of the net pen. The AUV will follow in 3D. The method described below is designed to be augumented for this purpose.
+
+\section{Reference Frame}
+
+The path is defined in a local \textit{path frame} $\{P\}$, where:
+\begin{itemize}
+    \item The $z$-axis points down
+    \item The $y$-axis points to the right
+    
+\end{itemize}
+
+For simplicity, the path frame is currently assumed to be the same as the \textit{net frame} $\{N\}$ that follows the fish net surface, which is assumed to correspond to  \textit{North-East-Down frame} $\{NED\}$.
+This means that the generated path can be used directly without additional coordinate transformations. In the future one needs to rotate the path into the netframe to follow it.
+
+\section{Motivation}
+
+A common and effective coverage strategy for inspection is the \textit{lawnmower} pattern.  
+In this motion, the ROV moves vertically up and down while slowly progressing horizontally between each sweep.  
+This pattern ensures that the entire surface is covered if the vertical and horizontal step sizes are smaller than the camera’s field of view.
+
+\section{Analytical Path Generation}
+
+The path is inspired by a unipolar square pulse function, which alternates between two levels.  
+A MATLAB implementation of such a signal is:
+
+\begin{lstlisting}[language=Matlab, caption={Unipolar periodic square pulse.}]
+A = 10;        % Maximum amplitude
+N = 10;        % Number of waves
+s = linspace(0, 1, 100);
+x = 100 * s;
+z = (A/2) * (1 + sign(sin(2*pi*N*s)));
+plot(x, z, 'LineWidth', 2);
+xlabel('x [m]'); ylabel('z [m]');
+title('Unipolar Periodic Square Pulse');
+grid on;
+\end{lstlisting}
+
+Here, the function switches between 0 and $A$, creating a simple on–off pattern.  
+The same concept is used to move the ROV up and down vertically while it gradually moves tangentially along the circumference of the net.
+
+\section{Circular Lawn­mower Pattern in the $y$--$z$ Plane}
+
+Let:
+\begin{itemize}
+    \item $R$: radius of the net,
+    \item $H$: total vertical height of the inspection area,
+    \item $N$: number of vertical up–down sweeps.
+\end{itemize}
+
+The path length along the net corresponds to one full circle, so the total horizontal distance in the path frame is
+\begin{equation}
+    W = 2\pi R.
+\end{equation}
+
+The analytical path can then be expressed as:
+\begin{equation}
+    z(s) = \frac{H}{2} \big( 1 + \text{sign}(\sin(2\pi N s)) \big),
+\end{equation}
+\begin{equation}
+    y(s) = W \, s,
+\end{equation}
+where $s \in [0,1]$ is the path parameter.  
+This gives a trajectory where the ROV moves up and down in $z$ while making a full circular sweep along the net’s circumference.
+
+\section{Coverage and Scaling}
+Because the path is described analytically, it can easily be adapted to different net sizes.  
+By setting the path length equal to the circumference ($2\pi R$) and the height to the total net height $h$, the entire net can be covered.  
+
+To guarantee full coverage, the step sizes in both the horizontal and vertical directions should be smaller than the camera’s field of view. 

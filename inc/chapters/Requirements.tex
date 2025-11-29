@@ -1,0 +1,34 @@
+% ======= requirements_rov_guidance.tex (one page) =======
+
+% --- local, tiny setup (safe to include anywhere) ---
+\makeatletter
+\providecommand{\REQ}{REQ}\providecommand{\NFR}{NFR}\providecommand{\SAF}{SAF}\providecommand{\INTF}{INTF}\providecommand{\ENV}{ENV}
+\newcommand{\reqrow}[4]{#1 & #2 & #3 & #4\\}
+\makeatother
+
+% \section*{Requirements (Autonomous Guidance for Fish-Net Inspecting ROV)}
+\small % keep it one page
+\noindent\textbf{Context.} Guidance plans and drives coverage along the net surface; interfaces with nav/perception and outputs speed/heading commands to the controller.
+
+\vspace{0.5em}
+\begin{tabularx}{\textwidth}{@{}l l X l@{}}
+\toprule
+\textbf{ID} & \textbf{Type} & \textbf{Requirement (verifiable)} & \textbf{Verification} \\
+\midrule
+\reqrow{R-001}{\REQ}{Plan collision-free coverage achieving \(\ge 95\%\) net surface observed with \(\ge 20\%\) view overlap (configurable).}{Simulation}
+\reqrow{R-002}{\INTF}{Output at \(\ge 5\,\mathrm{Hz}\): surge speed \(U\), heading \(\chi\), and depth \(z\).}{Test}
+\reqrow{R-003}{\REQ}{Maintain standoff to net \(1\pm0.3\,\mathrm{m}\).}{Simulation}
+\reqrow{R-004}{\INTF}{Accept pose \((x,y,z,\psi)\) with covariance; if \(\sigma_{xy}>1.0\,\mathrm{m}\) or DR \(>30\,\mathrm{s}\) then enter drift-safe mode (reduced speed, increased standoff).}{Simulation}
+\reqrow{R-005}{\ENV}{Operate in currents up to \(0.6\,\mathrm{m/s}\); if lateral track error \(>0.5\,\mathrm{m}\) for \(>5\,\mathrm{s}\), replan or abort per safety logic.}{Simulation}
+\reqrow{R-006}{\REQ}{Save areas complete and uninspected regions to database.}{Demo}
+\reqrow{R-007}{\INTF}{Publish topics: \texttt{/guidance/cmd} \((U,\dot \psi,z)\), \texttt{/guidance/mode}, \texttt{/coverage/status}, \texttt{/safety/event}.}{Inspection}
+\reqrow{R-008}{\NFR}{Limit required computing power to a minimum.}{Analysis/Demo}
+%\reqrow{R-009}{\REQ}{Replan time for local obstacle or current change \(\le 2\,\mathrm{s}\).}{Inspection/Demo}
+\reqrow{R-010}{\INTF}{Parameter set: \(U_{\max}\), rate limits, spacing to net, abort criteria.}{Analysis}
+\reqrow{R-011}{\INTF}{When abort conditions are met, return to surface.}{Simulation}
+\bottomrule
+\label{table:req}
+\end{tabularx}
+
+\vspace{0.6em}
+\noindent\textit{Verification codes:} Inspection (document/code review), Simulation (unit, test scripts).

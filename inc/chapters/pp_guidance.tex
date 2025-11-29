@@ -1,0 +1,179 @@
+\chapter{Guidance System}
+
+This chapter describes the implementation of the guidance system, which takes the predefined path and generates reference signals for the AUV to follow the path. The algorithm operates in the two dimensional space of the yz-axis of the NED coordinate frame, All positions, velocities, and path waypoints are expressed in this frame. It outputs desired velocities in the east and down directions. In the north direction, it uses a fixed distance to the net $x_d$, which the autopilot for the surge direction controls.
+
+The algorithm is designed to work in the simplified case where the netframe = NED, but with further extensions in mind, where the goal is to estimate the netframe relative to ned. The net will be assumed a plane, and estimated from the point cloud created by the onboard camera. For this project the plane will always be the yz-plane and the normal will be the x-axis. 
+
+In order to avoid doing local navigation based on unaccurate estimation of global position. The path in the 2D-plane will be put into the netframe, which in the simplified case is ned, and the auv will be given references in the normal of the tangent plane. It will be recieving feedback from the perception system for when it is at the top and when it is at the bottom. It will assume it is moving with the (commanded speed or measured speed??)  along the trajectory to ensure complete coverage. once it recieves updates on top and bottom, it will update its estimate for where it is on the path by jumping to the closest path corner of the correct type. 
+
+The vehicle is modeled as a \textbf{point mass}, and therefore only translational dynamics are considered. This is justified by the fact that the vehicle has 8 thrusters and therefor can move in all 6DOF. It is also important that the ROV moves woth the camera always facing the net, and the center of bouyancy should not be rotated to be under the center of gravity.
+
+\section{Coordinate Frame}
+
+We use the standard \textbf{NED} frame:
+\begin{itemize}[noitemsep]
+    \item $x$ – North (positive towards geographic north)
+    \item $y$ – East (positive towards east)
+    \item $z$ – Down (positive downward)
+\end{itemize}
+
+All positions, velocities, and path waypoints are expressed in this frame.
+
+\section{Algorithm Overview}
+
+Each control cycle of the \texttt{guidance\_node} executes the following steps:
+\begin{enumerate}
+    \item Find the K which tells us how many points ahead we need to check.
+    \item Compute the distance from the current position to these points.
+    \item Find the smallest distance, and select this as the next waypoint.
+    \item Use this distance to compute desired velocity in y and z direction.
+
+\end{enumerate}
+
+\section{Mathematical Formulation}
+
+\subsection*{Selection of Lookahead Points}
+To determine how many upcoming waypoints to check, we define the number of points $k$ based on
+the current vehicle speed $v$, the guidance update period $\Delta t$, and the waypoint density
+$\rho$ (points per meter), and a scaling factor  $n_{\text{ahead}}$ which makes sure we check more than we need to, k will then be this number, rounded up:
+
+\[
+k = \left\lceil \rho \, v \, n_{\text{ahead}} \, \Delta t \right\rceil
+\]
+
+
+This ensures that the algorithm only considers the path section the vehicle can realistically reach
+within the prediction horizon.
+
+
+\subsection*{Nearest-Point Selection Among the Next $k$ Waypoints}
+
+Let the index of the last accepted waypoint be $i_{\text{last}}$ and let the current
+vehicle position be $P \in \mathbb{R}^3$ (NED).
+Given $k$ from the lookahead rule, define the candidate waypoint set
+\[
+\mathcal{C} = \{\, W_{i_{\text{last}}+1},\, W_{i_{\text{last}}+2},\, \dots,\, W_{i_{\text{last}}+k} \,\}
+\cap \{ W_0, \dots, W_N \}.
+\]
+
+For each candidate waypoint $W_j \in \mathcal{C}$, compute the Euclidean norm
+to the current position:
+\[
+d_j = \| P - W_j \|, 
+\qquad
+j \in \bigl\{ i_{\text{last}}+1, \dots, \min(i_{\text{last}}+k,\,N) \bigr\}.
+\]
+
+Select the nearest waypoint and set the point n in front of that on the path as the next waypoint $P_d$:
+\[
+j^\star = \arg\min_{j \in \{ i_{\text{last}}+1,\, \dots,\, \min(i_{\text{last}}+k,\,N) \}} d_j,
+\qquad
+P_d = W_{j^\star + n}.
+\]
+
+If several indices $j$ give the same minimum distance, select the one with the largest index is chosen to
+ensure forward progress:
+\[
+j^\star = \max \arg\min d_j.
+\]
+
+Finally, update the last-visited index:
+\[
+i_{\text{last}} \leftarrow j^\star.
+\]
+
+
+\subsection*{Control Objective}
+
+We define the position error in the $yz$-plane as
+\[
+\mathbf{e}^p :=
+\begin{bmatrix}
+y \\[4pt] z
+\end{bmatrix}
+-
+\begin{bmatrix}
+y_d \\[4pt] z_d
+\end{bmatrix}
+=
+\mathbf{p} - \mathbf{p}_d.
+\]
+
+The control objective is to drive the vehicle toward the desired point $\mathbf{p}_d$.
+The desired velocity command is chosen as proportional to the normalized position error:
+\[
+\begin{bmatrix}
+v_{E,d} \\[4pt] v_{D,d}
+\end{bmatrix}
+= 
+-\,k _g\,
+\frac{\mathbf{e^p}}{\|\mathbf{e^p}\|},
+\]
+where $k_g>0$ is a proportional gain determining the approach speed. This also gives the course angle in the yz plane $\chi = \text{atan2}(\omega_d, v_d)$,  
+
+This ensures that the commanded velocity vector always points directly toward the desired position
+with magnitude proportional to $k_g$.
+
+In surge the desired distance to the net $x_d$, and the desired angle $\psi_d$ is set directly. Usually $\psi_d = 0$ and $x_d = 2\text{m}$.
+
+\subsection*{Control Objective - with current compensation} 
+We define the position error in the $yz$-plane as
+\[
+\mathbf{e}^p :=
+\begin{bmatrix}
+y \\[4pt] z
+\end{bmatrix}
+-
+\begin{bmatrix}
+y_d \\[4pt] z_d
+\end{bmatrix}
+=
+\mathbf{p} - \mathbf{p}_d.
+\]
+
+\[
+\mathbf{e}^{ct} :=
+\begin{bmatrix}
+y \\[4pt] z
+\end{bmatrix}
+-
+\begin{bmatrix}
+y_{j^*} \\[4pt] z_{j^*}
+\end{bmatrix}
+=
+\mathbf{p} - \mathbf{p}_{j^*}.
+\]
+To compensate for current effects and unmodeled disturbances, we need to use integral effect. To acheive this introduce a sliding variabel to mimic PI-guidance law, inspired by sliding mode control.[ref]
+\[ \mathbf{\sigma} = \mathbf{e^p} + \lambda \int_{0}^{\tau}{e^{ct}dt}\]
+\[
+\begin{bmatrix}
+v_{E,d} \\[4pt] v_{D,d}
+\end{bmatrix}
+= 
+-\,\kappa\,
+\frac{\mathbf{\sigma}}{\|\mathbf{\sigma}\|},
+\]
+Where $\lambda$ is a tuning parameter, where 0.1 is a value which usually works well is what has showed to work well in this controller as well.
+\subsection{crossing the corners}
+In the case of the square path, we need to make sure that the guidance law is not cutting the corners as this will lead to strange integral effects. In addition to this, we need to make sure that integral error is not saved from segment to segment as this can lead to strange behavior as the sea state at the surface can be very different from the state at 50m depth[makes sense but have no source]. To handle these two issues, the integral state will be multiplied by the normalized values of the path normal.
+
+To avoid the issue of incorrect behavior in the corners, the path is augumented past the corners, and the auv can only enter the next segment if it has reached the the acceptance radius of the corner
+
+The guidance algorithm is also tested in the case of treating it as a holonomic vehicle driving in the yz-plane, and constructing the path of circle segments and straight lines. In this case the corner functionality is disabled. 
+\subsection{Orientation Control Using the Surface Normal}
+
+The vehicle’s camera must always face the net. The desired yaw and pitch follow directly
+from the surface normal, which in the simplified case will be zero:
+
+\[
+\psi_d = \text{atan2}(n_{f,y},\, n_{f,x}) = 0,
+\qquad
+\theta_d = -\arcsin(n_{f,z}) = 0.
+\]
+\subsection{Current compensation}
+The important factor to correct for current which moves us of track. A method to estimate the current is implemented. It updates an estimate of the current in north and east directions. As we are mostly concerned with position drift and not attitude in this case which normally is the case.
+\section{Summary}
+
+Pure Pursuit is a geometric path-following algorithm in which the vehicle continuously aims for the closest point on the path. It is a suitable choice for this application as the distances are small and the path is made up of straight lines.
+
+By modeling the vehicle as a point pass and considering the speed in the xz directions, we keep the vehicle in the upright position. 

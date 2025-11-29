@@ -1,0 +1,78 @@
+\chapter{Implementation}
+
+This chapter describes the implementation of the system developed for path planning and guidance of the ROV.  
+The implementation is based on the Robot Operating System (ROS 2), which provides a modular framework for message-based communication between processes.  
+ROS 2 was chosen both because it is widely used in industry, and is the already used in the existing project.
+
+\section{Software Architecture}
+
+The complete system consists of several ROS 2 nodes, each with a responsibility.  
+The nodes implemented are:
+
+\begin{itemize}
+    \item \textbf{guidance\_node}:  
+    Implements the path-following logic based on the Pure Pursuit algorithm.  
+    It receives the current vehicle position and publishes desired velocity commands in the $y$ and $z$ directions.
+
+    \item \textbf{path\_planner}:  
+    Generates the analytical circular lawnmower path described in Chapter~3.  
+    The path is parameterized by the net radius $R$, total height $H$, and number of vertical sweeps $N$.  
+    The node outputs a list of waypoints used by the guidance node.
+
+    \item \textbf{path\_manager}:  
+    Implements the logic for deciding which waypoint the guidance node should move towards
+
+    \item \textbf{Autopilot}:  
+    Converts velocity commands from the guidance node, and the desired distance and yaw angle into forces to be applied by the thrusters in the 6DOF.
+
+    \item  \textbf{Simulator}:    
+    Simulates the motion, and outputs absolute position in x,y,z. which it publishes for the other nodes to use.
+\end{itemize}
+
+Each node communicates using ROS 2 \textit{topics} and parameters.  
+This modular design allows components to be replaced or updated independently, which is useful especially for testing.
+
+\section{ROS Topics and Message Flow}
+
+ROS 2 uses a publish/subscribe communication model.  
+The main topics used in this system are:
+
+\begin{itemize}
+    \item \texttt{/path/waypoints} — published by \texttt{path\_generator}, containing the planned path.
+    \item \texttt{/state/estimate} — published by \texttt{state\_estimator}, providing the ROV pose $(x, y, z, \psi)$.
+    \item \texttt{/guidance/cmd} — published by \texttt{guidance\_node}, containing the desired velocity commands $(v_y, v_z)$.
+    \item \texttt{/controller/cmd} — sent to the ROV controller with desired body-frame velocities $(u, v, w)$.
+    \item \texttt{/coverage/status} — optional topic that tracks which parts of the net have been inspected.
+\end{itemize}
+
+These topics follow a clear hierarchy:  
+the path generator defines the mission, the guidance node converts this into motion commands, and the controller executes them through the autopilot.
+
+\section{Why ROS 2}
+
+ROS 2 was chosen for several reasons:
+
+\begin{itemize}
+    \item \textbf{Modularity:} Each part of the autonomy stack (guidance, estimation, control) is implemented as a separate node, which simplifies debugging and testing.
+    \item \textbf{Real-time and DDS communication:} ROS 2 uses the Data Distribution Service (DDS) for inter-process communication, allowing deterministic message timing even under load.
+    \item \textbf{Industry standard:} Mohn Technology and many other robotics companies use ROS 2, which makes the system compatible with existing tools and simulators.
+    \item \textbf{Simulation support:} ROS 2 integrates easily with Unity where the ximulator is implemented, allowing the same nodes to be used in both simulation and real-world deployment.
+\end{itemize}
+
+\section{Language and node structure}
+
+The main logic was implemented in \textbf{C++} to achieve high performance and low latency.  
+C++ allows direct access to memory and provides deterministic execution times, which are important for real-time control and guidance loops.  
+Python nodes were used only for visualization and logging tasks where timing was less critical.
+
+Each node was developed using a class-based structure to ensure clarity and reusability.  
+The structure is ros node interface, which handles the sending and recieving, and a seperate class which implements the behaviour. For the guidance node the following classes are implemented.
+
+\begin{itemize}
+    \item \texttt{GuidanceNode}:  
+    The ROS 2 node class handling subscriptions, publications, and timers.
+    \item \texttt{PurePursuit}:  
+    Contains the core logic for path following.
+\end{itemize}
+
+
